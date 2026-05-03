@@ -12,6 +12,8 @@ const SKILL_PATHS: Record<Key, Resolver> = {
   'claude:global':   _ => path.join(os.homedir(), '.claude', 'skills'),
   'vscode:local':    r => path.join(r, '.cursor', 'rules'),
   'vscode:global':   _ => path.join(os.homedir(), '.cursor', 'rules'),
+  'windsurf:local':  r => path.join(r, '.windsurf', 'rules'),
+  'windsurf:global': _ => path.join(os.homedir(), '.windsurf', 'rules'),
 };
 
 const AGENT_PATHS: Record<Key, Resolver> = {
@@ -21,6 +23,8 @@ const AGENT_PATHS: Record<Key, Resolver> = {
   'claude:global':   _ => path.join(os.homedir(), '.claude', 'agents'),
   'vscode:local':    r => path.join(r, '.cursor', 'rules'),
   'vscode:global':   _ => path.join(os.homedir(), '.cursor', 'rules'),
+  'windsurf:local':  r => path.join(r, '.windsurf', 'rules'),
+  'windsurf:global': _ => path.join(os.homedir(), '.windsurf', 'rules'),
 };
 
 /**

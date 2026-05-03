@@ -1,5 +1,5 @@
 {
-  "name": "@sdlc/apm",
+  "name": "@kozen/apm",
   "version": "1.0.0",
   "description": "APM — Agent Package Manager. Install, update, and manage AI skills and agents across providers.",
   "main": "dist/index.js",

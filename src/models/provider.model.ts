@@ -12,6 +12,7 @@ export enum Provider {
   STANDARD = 'standard',
   CLAUDE   = 'claude',
   VSCODE   = 'vscode',
+  WINDSURF = 'windsurf',
 }
 
 export enum Scope {

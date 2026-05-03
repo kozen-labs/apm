@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { bootstrap } from '../../src/core/bootstrap';
 import { ApmInstaller } from '../../src/core/installer';
 import { PackageType, Provider, Scope } from '../../src/models/provider.model';
 import type { ApmPackage } from '../../src/models/package.model';
@@ -33,6 +34,8 @@ function seedSkill(root: string, name: string): ApmPackage {
 describe('ApmInstaller', () => {
   let tmpDir: string;
   let installer: ApmInstaller;
+
+  beforeAll(() => { bootstrap(); });
 
   beforeEach(() => {
     tmpDir = makeTmpDir();

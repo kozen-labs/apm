@@ -49,9 +49,9 @@ describe('resolveInstallPath()', () => {
 });
 
 describe('allSkillLocations()', () => {
-  it('returns six entries (3 providers × 2 scopes)', () => {
+  it('returns eight entries (4 providers × 2 scopes)', () => {
     const locs = allSkillLocations(PROJECT_ROOT);
-    expect(locs).toHaveLength(6);
+    expect(locs).toHaveLength(8);
   });
 
   it('every entry has provider, scope, and path fields', () => {
@@ -64,8 +64,8 @@ describe('allSkillLocations()', () => {
 });
 
 describe('allAgentLocations()', () => {
-  it('returns six entries', () => {
-    expect(allAgentLocations(PROJECT_ROOT)).toHaveLength(6);
+  it('returns eight entries (4 providers × 2 scopes)', () => {
+    expect(allAgentLocations(PROJECT_ROOT)).toHaveLength(8);
   });
 });
 

@@ -6,6 +6,7 @@ import { PackageType, Scope } from '../models/provider.model';
 import { ApmManifestManager } from './manifest';
 import { ApmConfigManager } from './config';
 import * as PluginRegistry from './PluginRegistry';
+import { bareSkillName } from '../utils/pkg';
 
 const DEFAULT_CACHE_DIR = path.join(os.homedir(), 'apm.cache');
 
@@ -79,7 +80,7 @@ export class ApmRegistry {
    */
   getInstalled(type: PackageType = PackageType.SKILL): InstalledPackage[] {
     const available = this.getAvailable(type);
-    const sourceMap = new Map(available.map(p => [p.name, p.updated]));
+    const sourceMap = new Map(available.map(p => [bareSkillName(p.name), p.updated]));
     const sourcePaths = this.getSourcePaths();
     const installed: InstalledPackage[] = [];
 

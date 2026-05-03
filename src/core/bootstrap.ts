@@ -2,9 +2,11 @@ import { registerRepository } from './PluginRegistry';
 import { registerProvider }   from './PluginRegistry';
 import { LocalRepositoryStrategy }    from '../repositories/LocalRepositoryStrategy';
 import { GitHubRepositoryStrategy }   from '../repositories/GitHubRepositoryStrategy';
+import { NpmRepositoryStrategy }      from '../repositories/NpmRepositoryStrategy';
 import { StandardProviderStrategy }   from '../providers/StandardProviderStrategy';
 import { ClaudeProviderStrategy }     from '../providers/ClaudeProviderStrategy';
 import { VscodeProviderStrategy }     from '../providers/VscodeProviderStrategy';
+import { WindsurfProviderStrategy }   from '../providers/WindsurfProviderStrategy';
 
 let bootstrapped = false;
 
@@ -27,9 +29,11 @@ export function bootstrap(): void {
   // ── Repository strategies ─────────────────────────────────────────────
   registerRepository(new LocalRepositoryStrategy());
   registerRepository(new GitHubRepositoryStrategy());
+  registerRepository(new NpmRepositoryStrategy());
 
   // ── Provider strategies ───────────────────────────────────────────────
   registerProvider(new StandardProviderStrategy());
   registerProvider(new ClaudeProviderStrategy());
   registerProvider(new VscodeProviderStrategy());
+  registerProvider(new WindsurfProviderStrategy());
 }

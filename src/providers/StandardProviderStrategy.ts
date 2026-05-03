@@ -4,6 +4,7 @@ import os from 'os';
 import { ApmPackage, InstalledPackage } from '../models/package.model';
 import { PackageType, Provider, Scope } from '../models/provider.model';
 import { parseFrontmatter } from '../utils/frontmatter';
+import { bareSkillName } from '../utils/pkg';
 import { IProviderStrategy } from './IProviderStrategy';
 
 /**
@@ -37,7 +38,7 @@ export class StandardProviderStrategy implements IProviderStrategy {
       const dst = path.join(installPath, path.basename(pkgLocalPath));
       fs.copyFileSync(pkgLocalPath, dst);
     } else {
-      const dst = path.join(installPath, pkg.name);
+      const dst = path.join(installPath, bareSkillName(pkg.name));
       if (this.samePath(dst, pkgLocalPath)) return;
       fs.rmSync(dst, { recursive: true, force: true });
       this.copyDir(pkgLocalPath, dst);
@@ -45,10 +46,15 @@ export class StandardProviderStrategy implements IProviderStrategy {
   }
 
   uninstall(name: string, type: PackageType, installPath: string): void {
+    const bare = bareSkillName(name);
     const p = type === PackageType.AGENT
-      ? path.join(installPath, `${name}.md`)
-      : path.join(installPath, name);
-    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+      ? path.join(installPath, `${bare}.md`)
+      : path.join(installPath, bare);
+    if (!fs.existsSync(p)) {
+      const err = Object.assign(new Error(`Not found: ${p}`), { code: 'ENOENT' });
+      throw err;
+    }
+    fs.rmSync(p, { recursive: true, force: true });
   }
 
   listInstalled(
