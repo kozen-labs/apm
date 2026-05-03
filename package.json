@@ -11,6 +11,7 @@
     "dist",
     "bin/apm",
     "bin/apm.cmd",
+    "cfg",
     ".agents/skills",
     ".agents/agents",
     ".agents/apm.json",
@@ -19,9 +20,13 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run copy:cfg",
+    "copy:cfg": "copyfiles -u 1 \"src/configs/*.json\" dist/",
     "build:watch": "tsc --watch",
-    "dev": "ts-node src/cli/index.ts",
+    "start": "npx kozen --config=cfg/config.json",
+    "dev": "ts-node node_modules/@kozen/engine/dist/bin/kozen.js --moduleLoad=. --action=apm:help",
+    "mcp:dev": "npx -y @modelcontextprotocol/inspector npx -y ts-node node_modules/@kozen/engine/dist/bin/kozen.js --moduleLoad=. --type=mcp",
+    "mcp:start": "ts-node node_modules/@kozen/engine/dist/bin/kozen.js --moduleLoad=. --type=mcp",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "type-check": "tsc --noEmit",
@@ -29,9 +34,21 @@
     "test:watch": "jest --watch",
     "prepublishOnly": "npm run lint && npm run build"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
-    "ai", "agents", "skills", "package-manager",
-    "claude", "cursor", "llm", "mongodb", "sdlc"
+    "kozen",
+    "ai",
+    "agents",
+    "skills",
+    "package-manager",
+    "claude",
+    "cursor",
+    "llm",
+    "mongodb",
+    "sdlc",
+    "mcp"
   ],
   "author": "Antonio Membrides Espinosa <antonio.membrides@mongodb.com>",
   "license": "MIT",
@@ -40,13 +57,19 @@
     "url": "https://github.com/mongodb/agent-skills.git"
   },
   "homepage": "https://github.com/mongodb/agent-skills#readme",
-  "bugs": { "url": "https://github.com/mongodb/agent-skills/issues" },
-  "engines": { "node": ">=18.0.0" },
+  "bugs": {
+    "url": "https://github.com/mongodb/agent-skills/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
+    "@kozen/engine": "^1.1.15",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "gray-matter": "^4.0.3",
-    "inquirer": "^8.2.6"
+    "inquirer": "^8.2.6",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/inquirer": "^8.2.10",
@@ -54,6 +77,7 @@
     "@types/node": "^20.14.2",
     "@typescript-eslint/eslint-plugin": "^7.13.0",
     "@typescript-eslint/parser": "^7.13.0",
+    "copyfiles": "^2.4.1",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
     "prettier": "^3.3.2",
