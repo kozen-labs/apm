@@ -1,6 +1,6 @@
 import path from 'path';
 import os from 'os';
-import { Provider, Scope } from '../models/provider.model';
+import { Provider, Scope } from '../../models/provider.model';
 
 type Key = `${Provider}:${Scope}`;
 type Resolver = (root: string) => string;
@@ -10,8 +10,10 @@ const SKILL_PATHS: Record<Key, Resolver> = {
   'standard:global': _ => path.join(os.homedir(), '.agents', 'skills'),
   'claude:local':    r => path.join(r, '.claude', 'skills'),
   'claude:global':   _ => path.join(os.homedir(), '.claude', 'skills'),
-  'vscode:local':    r => path.join(r, '.cursor', 'rules'),
-  'vscode:global':   _ => path.join(os.homedir(), '.cursor', 'rules'),
+  'cursor:local':    r => path.join(r, '.cursor', 'rules'),
+  'cursor:global':   _ => path.join(os.homedir(), '.cursor', 'rules'),
+  'vscode:local':    r => path.join(r, '.vscode', 'skills'),
+  'vscode:global':   _ => path.join(os.homedir(), '.vscode', 'skills'),
   'windsurf:local':  r => path.join(r, '.windsurf', 'rules'),
   'windsurf:global': _ => path.join(os.homedir(), '.windsurf', 'rules'),
 };
@@ -21,15 +23,17 @@ const AGENT_PATHS: Record<Key, Resolver> = {
   'standard:global': _ => path.join(os.homedir(), '.agents', 'agents'),
   'claude:local':    r => path.join(r, '.claude', 'agents'),
   'claude:global':   _ => path.join(os.homedir(), '.claude', 'agents'),
-  'vscode:local':    r => path.join(r, '.cursor', 'rules'),
-  'vscode:global':   _ => path.join(os.homedir(), '.cursor', 'rules'),
+  'cursor:local':    r => path.join(r, '.cursor', 'rules'),
+  'cursor:global':   _ => path.join(os.homedir(), '.cursor', 'rules'),
+  'vscode:local':    r => path.join(r, '.vscode', 'skills'),
+  'vscode:global':   _ => path.join(os.homedir(), '.vscode', 'skills'),
   'windsurf:local':  r => path.join(r, '.windsurf', 'rules'),
   'windsurf:global': _ => path.join(os.homedir(), '.windsurf', 'rules'),
 };
 
 /**
  * Resolve the filesystem install path for a given provider / scope.
- * When `customDir` is provided it takes precedence over the table (local scope only).
+ * When `customDir` is provided it takes precedence over the table.
  */
 export function resolveInstallPath(
   provider: Provider,
@@ -64,7 +68,6 @@ export function allAgentLocations(projectRoot: string): InstallLocation[] {
   });
 }
 
-/** Directories where ks-* skill sources live (not provider install targets). */
 export function skillSourceBases(projectRoot: string): string[] {
   return [
     path.join(projectRoot, '.agents', 'skills'),
@@ -72,7 +75,6 @@ export function skillSourceBases(projectRoot: string): string[] {
   ];
 }
 
-/** Directories where agent .md sources live. */
 export function agentSourceBases(projectRoot: string): string[] {
   return [
     path.join(projectRoot, '.agents', 'agents'),

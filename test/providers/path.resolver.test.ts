@@ -6,7 +6,7 @@ import {
   allAgentLocations,
   skillSourceBases,
   agentSourceBases,
-} from '../../src/providers/path.resolver';
+} from '../../src/plugins/providers/path.resolver';
 import { Provider, Scope } from '../../src/models/provider.model';
 
 const PROJECT_ROOT = '/project';
@@ -37,9 +37,19 @@ describe('resolveInstallPath()', () => {
     expect(resolveInstallPath(Provider.STANDARD, Scope.GLOBAL, PROJECT_ROOT)).toBe(expected);
   });
 
-  it('resolves vscode:local to <project>/.cursor/rules', () => {
-    const expected = path.join(PROJECT_ROOT, '.cursor', 'rules');
+  it('resolves vscode:local to <project>/.vscode/skills', () => {
+    const expected = path.join(PROJECT_ROOT, '.vscode', 'skills');
     expect(resolveInstallPath(Provider.VSCODE, Scope.LOCAL, PROJECT_ROOT)).toBe(expected);
+  });
+
+  it('resolves cursor:local to <project>/.cursor/rules', () => {
+    const expected = path.join(PROJECT_ROOT, '.cursor', 'rules');
+    expect(resolveInstallPath(Provider.CURSOR, Scope.LOCAL, PROJECT_ROOT)).toBe(expected);
+  });
+
+  it('resolves windsurf:local to <project>/.windsurf/rules', () => {
+    const expected = path.join(PROJECT_ROOT, '.windsurf', 'rules');
+    expect(resolveInstallPath(Provider.WINDSURF, Scope.LOCAL, PROJECT_ROOT)).toBe(expected);
   });
 
   it('resolves agent type for claude:global to ~/.claude/agents', () => {
@@ -49,9 +59,9 @@ describe('resolveInstallPath()', () => {
 });
 
 describe('allSkillLocations()', () => {
-  it('returns eight entries (4 providers × 2 scopes)', () => {
+  it('returns ten entries (5 providers × 2 scopes)', () => {
     const locs = allSkillLocations(PROJECT_ROOT);
-    expect(locs).toHaveLength(8);
+    expect(locs).toHaveLength(10);
   });
 
   it('every entry has provider, scope, and path fields', () => {
@@ -64,8 +74,8 @@ describe('allSkillLocations()', () => {
 });
 
 describe('allAgentLocations()', () => {
-  it('returns eight entries (4 providers × 2 scopes)', () => {
-    expect(allAgentLocations(PROJECT_ROOT)).toHaveLength(8);
+  it('returns ten entries (5 providers × 2 scopes)', () => {
+    expect(allAgentLocations(PROJECT_ROOT)).toHaveLength(10);
   });
 });
 

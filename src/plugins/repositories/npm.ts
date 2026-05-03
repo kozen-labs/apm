@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
-import { ApmPackage } from '../models/package.model';
-import { ApmSource } from '../models/config.model';
+import { ApmPackage } from '../../models/package.model';
+import { ApmSource } from '../../models/config.model';
 import { IRepositoryStrategy } from './IRepositoryStrategy';
-import { LocalRepositoryStrategy } from './LocalRepositoryStrategy';
+import { LocalRepositoryStrategy } from './local';
 
 /**
  * NpmRepositoryStrategy — installs an npm package into a local cache directory
@@ -32,25 +32,18 @@ export class NpmRepositoryStrategy implements IRepositoryStrategy {
 
   list(source: ApmSource, cacheDir: string, _projectRoot: string): ApmPackage[] {
     const pkgDir = this.ensureInstalled(source, cacheDir);
-    const cacheSource = this.toLocalSource(source, pkgDir);
-    return this.local.list(cacheSource, cacheDir, pkgDir);
+    return this.local.list(this.toLocalSource(source, pkgDir), cacheDir, pkgDir);
   }
 
-  getLocalPath(
-    pkg: ApmPackage,
-    source: ApmSource,
-    cacheDir: string,
-    _projectRoot: string,
-  ): string {
+  getLocalPath(pkg: ApmPackage, source: ApmSource, cacheDir: string, _projectRoot: string): string {
     const pkgDir = this.ensureInstalled(source, cacheDir);
-    const cacheSource = this.toLocalSource(source, pkgDir);
-    return this.local.getLocalPath(pkg, cacheSource, cacheDir, pkgDir);
+    return this.local.getLocalPath(pkg, this.toLocalSource(source, pkgDir), cacheDir, pkgDir);
   }
 
   refresh(source: ApmSource, cacheDir: string): void {
     this.assertNpm();
-    const workDir = this.getWorkDir(source, cacheDir);
     const pkg     = this.requirePackage(source);
+    const workDir = this.getWorkDir(source, cacheDir);
     fs.mkdirSync(workDir, { recursive: true });
     this.ensurePackageJson(workDir);
     try {
@@ -59,15 +52,12 @@ export class NpmRepositoryStrategy implements IRepositoryStrategy {
       });
       fs.writeFileSync(path.join(workDir, '.apm-last-refresh'), new Date().toISOString());
     } catch (err) {
-      throw new Error(
-        `Failed to refresh npm source "${source.name}" (${pkg}): ${String(err)}`,
-      );
+      throw new Error(`Failed to refresh npm source "${source.name}" (${pkg}): ${String(err)}`);
     }
   }
 
   isStale(source: ApmSource, cacheDir: string): boolean {
-    const workDir    = this.getWorkDir(source, cacheDir);
-    const markerFile = path.join(workDir, '.apm-last-refresh');
+    const markerFile = path.join(this.getWorkDir(source, cacheDir), '.apm-last-refresh');
     if (!fs.existsSync(markerFile)) return true;
     const lastRefresh = new Date(fs.readFileSync(markerFile, 'utf-8').trim()).getTime();
     return Date.now() - lastRefresh > 24 * 60 * 60 * 1000;
@@ -79,7 +69,6 @@ export class NpmRepositoryStrategy implements IRepositoryStrategy {
     const pkg     = this.requirePackage(source);
     const workDir = this.getWorkDir(source, cacheDir);
     const pkgDir  = path.join(workDir, 'node_modules', pkg);
-
     if (!fs.existsSync(pkgDir)) {
       this.assertNpm();
       fs.mkdirSync(workDir, { recursive: true });
@@ -118,7 +107,6 @@ export class NpmRepositoryStrategy implements IRepositoryStrategy {
         `npm source "${source.name}" is missing a "package" field in apm.config.json.`,
       );
     }
-    // Prevent shell injection: allow only valid npm package name characters.
     if (!/^[@a-zA-Z0-9/_.-]+$/.test(source.package)) {
       throw new Error(
         `npm source "${source.name}" has an invalid package name: "${source.package}". ` +
@@ -132,17 +120,11 @@ export class NpmRepositoryStrategy implements IRepositoryStrategy {
     try {
       execSync('npm --version', { stdio: 'pipe' });
     } catch {
-      throw new Error(
-        'npm is required for npm repository sources but was not found on PATH.',
-      );
+      throw new Error('npm is required for npm repository sources but was not found on PATH.');
     }
   }
 
   private toLocalSource(source: ApmSource, pkgDir: string): ApmSource {
-    return {
-      ...source,
-      type: 'local',
-      path: pkgDir,
-    };
+    return { ...source, type: 'local', path: pkgDir };
   }
 }

@@ -45,6 +45,18 @@ export interface InstalledPackage {
   isOutdated: boolean;
 }
 
+/**
+ * Minimal per-entry result returned by IComponentPlugin.listFrom().
+ * Providers stamp provider + scope + type before returning InstalledPackage.
+ */
+export interface InstalledMeta {
+  name: string;
+  installPath: string;
+  installedUpdated: string;
+  sourceUpdated: string;
+  isOutdated: boolean;
+}
+
 /** Root structure of `.agents/apm.json`. */
 export interface ApmManifest {
   schemaVersion: string;

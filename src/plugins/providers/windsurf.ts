@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ApmPackage, InstalledPackage } from '../models/package.model';
-import { PackageType, Provider, Scope } from '../models/provider.model';
-import { parseFrontmatter, stripFrontmatter } from '../utils/frontmatter';
-import { bareSkillName } from '../utils/pkg';
+import { ApmPackage, InstalledPackage } from '../../models/package.model';
+import { PackageType, Provider, Scope } from '../../models/provider.model';
+import { parseFrontmatter, stripFrontmatter } from '../../utils/frontmatter';
+import { bareSkillName } from '../../utils/pkg';
 import { IProviderStrategy } from './IProviderStrategy';
 
 /**
@@ -15,6 +15,9 @@ import { IProviderStrategy } from './IProviderStrategy';
  *
  * Skills are converted: SKILL.md body content → .windsurfrules file.
  * Agents are not supported (Windsurf uses rule files only).
+ *
+ * Format conversion is Windsurf-specific, so install/listInstalled are
+ * implemented directly rather than delegating to IComponentPlugin.
  */
 export class WindsurfProviderStrategy implements IProviderStrategy {
   readonly name = Provider.WINDSURF;
@@ -51,30 +54,25 @@ export class WindsurfProviderStrategy implements IProviderStrategy {
   uninstall(name: string, _type: PackageType, installPath: string): void {
     const p = path.join(installPath, `${bareSkillName(name)}.windsurfrules`);
     if (!fs.existsSync(p)) {
-      const err = Object.assign(new Error(`Not found: ${p}`), { code: 'ENOENT' });
-      throw err;
+      throw Object.assign(new Error(`Not found: ${p}`), { code: 'ENOENT' });
     }
     fs.rmSync(p, { force: true });
   }
 
-  listInstalled(
-    installPath: string,
-    type: PackageType,
-    sourceMap: Map<string, string>,
-  ): InstalledPackage[] {
+  listInstalled(installPath: string, type: PackageType, sourceMap: Map<string, string>): InstalledPackage[] {
     if (!fs.existsSync(installPath) || type === PackageType.AGENT) return [];
     const out: InstalledPackage[] = [];
 
     for (const f of fs.readdirSync(installPath)) {
       if (!f.endsWith('.windsurfrules') || !f.startsWith('ks-')) continue;
-      const name = f.replace(/\.windsurfrules$/, '');
-      const fm   = parseFrontmatter(path.join(installPath, f));
+      const name             = f.replace(/\.windsurfrules$/, '');
+      const fm               = parseFrontmatter(path.join(installPath, f));
       const installedUpdated = String(fm.updated ?? '');
       const sourceUpdated    = sourceMap.get(name) ?? '';
       out.push({
         name, type,
-        provider: Provider.WINDSURF,
-        scope:    Scope.LOCAL,
+        provider:    Provider.WINDSURF,
+        scope:       Scope.LOCAL,
         installPath: path.join(installPath, f),
         updated:       installedUpdated,
         sourceUpdated,

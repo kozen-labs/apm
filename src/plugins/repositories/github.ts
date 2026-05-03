@@ -2,16 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { execSync } from 'child_process';
-import { ApmPackage } from '../models/package.model';
-import { ApmSource } from '../models/config.model';
+import { ApmPackage } from '../../models/package.model';
+import { ApmSource } from '../../models/config.model';
 import { IRepositoryStrategy } from './IRepositoryStrategy';
-import { LocalRepositoryStrategy } from './LocalRepositoryStrategy';
+import { LocalRepositoryStrategy } from './local';
 
 const STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
- * GitHubRepositoryStrategy — clones or updates a GitHub repository to a
- * local cache directory, then delegates package scanning to LocalRepositoryStrategy.
+ * GitHubRepositoryStrategy — clones or updates a GitHub repository to a local
+ * cache directory, then delegates package scanning to LocalRepositoryStrategy.
  *
  * Source config:
  *   type: 'github'
@@ -23,8 +23,6 @@ const STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
  *   singleResource: true         (if the repo itself is one skill)
  *
  * Cache location: {cacheDir}/{source.name}/
- * Staleness: cached >24h triggers a warning; run `apm refresh` to pull.
- *
  * Requires: git on PATH.
  */
 export class GitHubRepositoryStrategy implements IRepositoryStrategy {
@@ -34,37 +32,21 @@ export class GitHubRepositoryStrategy implements IRepositoryStrategy {
 
   list(source: ApmSource, cacheDir: string, _projectRoot: string): ApmPackage[] {
     const repoDir = this.getRepoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) {
-      this.clone(source, repoDir);
-    }
-    // Delegate to LocalRepositoryStrategy using cacheDir as the source root.
-    const cacheSource = this.toCacheSource(source, repoDir);
-    return this.local.list(cacheSource, cacheDir, repoDir);
+    if (!fs.existsSync(repoDir)) this.clone(source, repoDir);
+    return this.local.list(this.toCacheSource(source, repoDir), cacheDir, repoDir);
   }
 
-  getLocalPath(
-    pkg: ApmPackage,
-    source: ApmSource,
-    cacheDir: string,
-    _projectRoot: string,
-  ): string {
+  getLocalPath(pkg: ApmPackage, source: ApmSource, cacheDir: string, _projectRoot: string): string {
     const repoDir = this.getRepoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) {
-      this.clone(source, repoDir);
-    }
-    const cacheSource = this.toCacheSource(source, repoDir);
-    return this.local.getLocalPath(pkg, cacheSource, cacheDir, repoDir);
+    if (!fs.existsSync(repoDir)) this.clone(source, repoDir);
+    return this.local.getLocalPath(pkg, this.toCacheSource(source, repoDir), cacheDir, repoDir);
   }
 
   refresh(source: ApmSource, cacheDir: string): void {
     const repoDir = this.getRepoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) {
-      this.clone(source, repoDir);
-      return;
-    }
+    if (!fs.existsSync(repoDir)) { this.clone(source, repoDir); return; }
     try {
       execSync(`git -C "${repoDir}" pull --ff-only --quiet`, { stdio: 'pipe' });
-      // Touch a marker file so isStale() can check the last pull time.
       fs.writeFileSync(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
     } catch (err) {
       throw new Error(
@@ -74,8 +56,7 @@ export class GitHubRepositoryStrategy implements IRepositoryStrategy {
   }
 
   isStale(source: ApmSource, cacheDir: string): boolean {
-    const repoDir   = this.getRepoDir(source, cacheDir);
-    const markerFile = path.join(repoDir, '.apm-last-refresh');
+    const markerFile = path.join(this.getRepoDir(source, cacheDir), '.apm-last-refresh');
     if (!fs.existsSync(markerFile)) return true;
     const lastRefresh = new Date(fs.readFileSync(markerFile, 'utf-8').trim()).getTime();
     return Date.now() - lastRefresh > STALE_MS;
@@ -84,8 +65,7 @@ export class GitHubRepositoryStrategy implements IRepositoryStrategy {
   // ── private ──────────────────────────────────────────────────────────────
 
   private getRepoDir(source: ApmSource, cacheDir: string): string {
-    const base = cacheDir || path.join(os.homedir(), 'apm.cache');
-    return path.join(base, source.name);
+    return path.join(cacheDir || path.join(os.homedir(), 'apm.cache'), source.name);
   }
 
   private clone(source: ApmSource, repoDir: string): void {
@@ -94,13 +74,9 @@ export class GitHubRepositoryStrategy implements IRepositoryStrategy {
     fs.mkdirSync(path.dirname(repoDir), { recursive: true });
     const refFlag = source.ref ? `--branch "${source.ref}"` : '';
     try {
-      execSync(
-        `git clone --depth=1 ${refFlag} "${source.url}" "${repoDir}"`,
-        { stdio: 'pipe' },
-      );
+      execSync(`git clone --depth=1 ${refFlag} "${source.url}" "${repoDir}"`, { stdio: 'pipe' });
       fs.writeFileSync(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
     } catch (err) {
-      // Clean up partial clone on failure.
       if (fs.existsSync(repoDir)) fs.rmSync(repoDir, { recursive: true, force: true });
       throw new Error(
         `Failed to clone "${source.url}": ${String(err)}\n` +
@@ -120,15 +96,7 @@ export class GitHubRepositoryStrategy implements IRepositoryStrategy {
     }
   }
 
-  /**
-   * Build a synthetic ApmSource that looks like a local source pointing
-   * at the cloned repo directory, preserving all path/namespace config.
-   */
   private toCacheSource(source: ApmSource, repoDir: string): ApmSource {
-    return {
-      ...source,
-      type: 'local',
-      path: repoDir,
-    };
+    return { ...source, type: 'local', path: repoDir };
   }
 }

@@ -5,9 +5,10 @@ import os from 'os';
 jest.mock('child_process', () => ({ execSync: jest.fn() }));
 import { execSync } from 'child_process';
 
-import { NpmRepositoryStrategy } from '../../src/repositories/NpmRepositoryStrategy';
+import { NpmRepositoryStrategy } from '../../src/plugins/repositories/npm';
 import { PackageType } from '../../src/models/provider.model';
 import type { ApmSource } from '../../src/models/config.model';
+import { bootstrap } from '../../src/core/bootstrap';
 
 const mockedExec = execSync as jest.Mock;
 
@@ -44,6 +45,8 @@ function seedPackage(workDir: string, pkgName: string): void {
 describe('NpmRepositoryStrategy', () => {
   let tmpDir: string;
   let strategy: NpmRepositoryStrategy;
+
+  beforeAll(() => { bootstrap(); });
 
   beforeEach(() => {
     tmpDir   = makeTmpDir();

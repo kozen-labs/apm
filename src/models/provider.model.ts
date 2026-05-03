@@ -3,14 +3,16 @@
  */
 
 export enum PackageType {
-  SKILL = 'skill',
-  AGENT = 'agent',
-  HOOK  = 'hook',
+  SKILL   = 'skill',
+  AGENT   = 'agent',
+  HOOK    = 'hook',
+  CONTEXT = 'context',
 }
 
 export enum Provider {
   STANDARD = 'standard',
   CLAUDE   = 'claude',
+  CURSOR   = 'cursor',
   VSCODE   = 'vscode',
   WINDSURF = 'windsurf',
 }

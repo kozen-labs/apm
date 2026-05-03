@@ -3,7 +3,7 @@ import { ApmRegistry } from '../../core/registry';
 import { ApmLockManager } from '../../core/lock';
 import { InstalledPackage } from '../../models/package.model';
 import { PackageType, Provider, Scope } from '../../models/provider.model';
-import { resolveInstallPath } from '../../providers/path.resolver';
+import { resolveInstallPath } from '../../plugins/providers/path.resolver';
 import * as log from '../../utils/log';
 
 export function statusCommand(projectRoot: string, type: PackageType | 'all'): void {

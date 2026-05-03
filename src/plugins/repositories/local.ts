@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { ApmPackage } from '../models/package.model';
-import { ApmSource } from '../models/config.model';
-import { PackageType, inferGroup } from '../models/provider.model';
-import { parseFrontmatter } from '../utils/frontmatter';
+import { ApmPackage } from '../../models/package.model';
+import { ApmSource } from '../../models/config.model';
+import { PackageType, inferGroup } from '../../models/provider.model';
 import { IRepositoryStrategy } from './IRepositoryStrategy';
+import { getComponent, hasComponent } from '../../core/PluginRegistry';
 
 const DEFAULT_SKILLS_PATH = path.join('.agents', 'skills');
 const DEFAULT_AGENTS_PATH = path.join('.agents', 'agents');
@@ -12,13 +12,17 @@ const DEFAULT_AGENTS_PATH = path.join('.agents', 'agents');
 /**
  * LocalRepositoryStrategy — reads packages from a directory on disk.
  *
+ * Delegates entry matching and metadata extraction to registered
+ * IComponentPlugin instances (SkillPlugin, AgentPlugin, …), so new
+ * component types are picked up automatically without modifying this file.
+ *
  * Source config:
  *   type: 'local'
  *   path: '.'                    (relative to projectRoot, default '.')
  *   skillsPath: '.agents/skills' (relative to source root, default shown)
  *   agentsPath: '.agents/agents' (relative to source root, default shown)
  *   namespace: 'myteam'          (optional name prefix)
- *   singleResource: true         (entire source root is one package)
+ *   singleResource: true         (entire source root is one skill package)
  *   resourceName: 'my-skill'     (explicit name for singleResource)
  */
 export class LocalRepositoryStrategy implements IRepositoryStrategy {
@@ -33,28 +37,18 @@ export class LocalRepositoryStrategy implements IRepositoryStrategy {
       path.join(sourceRoot, source.skillsPath ?? DEFAULT_SKILLS_PATH),
       PackageType.SKILL,
       source,
-      sourceRoot,
-      'ks-',
     );
     const agents = this.scanDir(
       path.join(sourceRoot, source.agentsPath ?? DEFAULT_AGENTS_PATH),
       PackageType.AGENT,
       source,
-      sourceRoot,
-      '',
     );
     return [...skills, ...agents];
   }
 
-  getLocalPath(
-    pkg: ApmPackage,
-    source: ApmSource,
-    _cacheDir: string,
-    projectRoot: string,
-  ): string {
+  getLocalPath(pkg: ApmPackage, source: ApmSource, _cacheDir: string, projectRoot: string): string {
     const sourceRoot = this.resolveRoot(source, projectRoot);
     if (source.singleResource) return sourceRoot;
-    // pkg.path is relative to the skills/agents base dir
     if (pkg.type === PackageType.AGENT) {
       return path.join(sourceRoot, source.agentsPath ?? DEFAULT_AGENTS_PATH, pkg.name + '.md');
     }
@@ -70,52 +64,34 @@ export class LocalRepositoryStrategy implements IRepositoryStrategy {
     return path.resolve(projectRoot, source.path ?? '.');
   }
 
-  private scanDir(
-    dir: string,
-    type: PackageType,
-    source: ApmSource,
-    sourceRoot: string,
-    prefix: string,
-  ): ApmPackage[] {
+  /**
+   * Scan a directory for all packages of a given type.
+   * Delegates entry detection and metadata to the registered IComponentPlugin.
+   * Falls back to a built-in scan when no component plugin is registered for the type.
+   */
+  private scanDir(dir: string, type: PackageType, source: ApmSource): ApmPackage[] {
     if (!fs.existsSync(dir)) return [];
     const pkgs: ApmPackage[] = [];
 
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (type === PackageType.SKILL) {
-        if (!entry.isDirectory()) continue;
-        if (prefix && !entry.name.startsWith(prefix)) continue;
-        const skillMd = path.join(dir, entry.name, 'SKILL.md');
-        if (!fs.existsSync(skillMd)) continue;
-        const fm = parseFrontmatter(skillMd);
-        const name = this.withNs(source.namespace, entry.name);
+    if (hasComponent(type)) {
+      const component = getComponent(type);
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (!component.matchEntry(entry, dir)) continue;
+        const entryPath = path.join(dir, entry.name);
+        const meta      = component.readMeta(entryPath, entry.name);
+        // For agents the component stores baseName separately (entry.name includes .md).
+        const baseName  = (meta as { _baseName?: string })._baseName ?? entry.name;
         pkgs.push({
-          name,
+          name:        this.withNs(source.namespace, baseName),
           path:        entry.name,
           type,
-          description: String(fm.description ?? ''),
-          group:       inferGroup(entry.name),
-          created:     String(fm.created  ?? ''),
-          updated:     String(fm.updated  ?? ''),
-          version:     String(fm.version  ?? '1.0.0'),
-          sourceRef:   source.name,
-          localPath:   path.join(dir, entry.name),
-        });
-      } else {
-        if (!entry.name.endsWith('.md')) continue;
-        const agentFile = path.join(dir, entry.name);
-        const fm = parseFrontmatter(agentFile);
-        const baseName = entry.name.replace(/\.md$/, '');
-        const name = this.withNs(source.namespace, baseName);
-        pkgs.push({
-          name,
-          path:        entry.name,
-          type,
-          description: String(fm.description ?? '').slice(0, 200),
+          description: String(meta.description ?? ''),
           group:       inferGroup(baseName),
-          created:     String(fm.created ?? ''),
-          updated:     String(fm.updated ?? ''),
+          created:     String(meta.created  ?? ''),
+          updated:     String(meta.updated  ?? ''),
+          version:     String(meta.version  ?? ''),
           sourceRef:   source.name,
-          localPath:   agentFile,
+          localPath:   entryPath,
         });
       }
     }
@@ -123,18 +99,19 @@ export class LocalRepositoryStrategy implements IRepositoryStrategy {
   }
 
   private scanSingle(source: ApmSource, sourceRoot: string): ApmPackage[] {
-    const skillMd = path.join(sourceRoot, 'SKILL.md');
-    const name    = this.withNs(source.namespace, source.resourceName ?? source.name);
-    const fm      = fs.existsSync(skillMd) ? parseFrontmatter(skillMd) : {};
+    if (!hasComponent(PackageType.SKILL)) return [];
+    const component = getComponent(PackageType.SKILL);
+    const name      = this.withNs(source.namespace, source.resourceName ?? source.name);
+    const meta      = component.readMeta(sourceRoot, source.resourceName ?? source.name);
     return [{
       name,
       path:        '.',
       type:        PackageType.SKILL,
-      description: String(fm.description ?? ''),
+      description: String(meta.description ?? ''),
       group:       inferGroup(name),
-      created:     String(fm.created  ?? ''),
-      updated:     String(fm.updated  ?? ''),
-      version:     String(fm.version  ?? '1.0.0'),
+      created:     String(meta.created  ?? ''),
+      updated:     String(meta.updated  ?? ''),
+      version:     String(meta.version  ?? '1.0.0'),
       sourceRef:   source.name,
       localPath:   sourceRoot,
     }];
