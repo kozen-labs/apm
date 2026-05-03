@@ -1,0 +1,28 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": { "project": "./tsconfig.json" },
+  "plugins": ["@typescript-eslint"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "camelcase": "off",
+    "@typescript-eslint/naming-convention": [
+      "warn",
+      { "selector": "function",          "format": ["camelCase"] },
+      { "selector": "method",            "format": ["camelCase"] },
+      { "selector": "variable",          "format": ["camelCase", "UPPER_CASE"] },
+      { "selector": "parameter",         "format": ["camelCase"] },
+      { "selector": "class",             "format": ["PascalCase"] },
+      { "selector": "interface",         "format": ["PascalCase"] },
+      { "selector": "typeAlias",         "format": ["PascalCase"] },
+      { "selector": "enum",              "format": ["PascalCase"] },
+      { "selector": "enumMember",        "format": ["UPPER_CASE"] }
+    ],
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-non-null-assertion": "off"
+  }
+}

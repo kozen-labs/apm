@@ -1,0 +1,12 @@
+{
+  "apm:mcp": {
+    "target": "ApmMCPController",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../controllers",
+    "dependencies": [
+      { "key": "assistant", "target": "IoC",            "type": "ref" },
+      { "key": "logger",    "target": "logger:service", "type": "ref" }
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "apm:config": {
+    "target": "ApmConfigService",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../services",
+    "dependencies": [
+      { "key": "assistant",   "target": "IoC",               "type": "ref" },
+      { "key": "logger",      "target": "logger:service",     "type": "ref" },
+      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
+    ]
+  },
+  "apm:registry": {
+    "target": "ApmRegistryService",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../services",
+    "dependencies": [
+      { "key": "assistant",   "target": "IoC",               "type": "ref" },
+      { "key": "logger",      "target": "logger:service",     "type": "ref" },
+      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
+    ]
+  },
+  "apm:installer": {
+    "target": "ApmInstallerService",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../services",
+    "dependencies": [
+      { "key": "assistant",   "target": "IoC",               "type": "ref" },
+      { "key": "logger",      "target": "logger:service",     "type": "ref" },
+      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
+    ]
+  },
+  "apm:manifest": {
+    "target": "ApmManifestService",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../services",
+    "dependencies": [
+      { "key": "assistant",   "target": "IoC",               "type": "ref" },
+      { "key": "logger",      "target": "logger:service",     "type": "ref" },
+      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
+    ]
+  },
+  "apm:lock": {
+    "target": "ApmLockService",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../services",
+    "dependencies": [
+      { "key": "assistant",   "target": "IoC",               "type": "ref" },
+      { "key": "logger",      "target": "logger:service",     "type": "ref" },
+      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
+    ]
+  }
+}

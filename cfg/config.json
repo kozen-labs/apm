@@ -1,0 +1,10 @@
+{
+  "name": "apm",
+  "version": "1.0.0",
+  "engine": ">=1.1.15",
+  "description": "APM — Agent Package Manager",
+  "modules": {
+    "load": ["."]
+  },
+  "type": "cli"
+}
