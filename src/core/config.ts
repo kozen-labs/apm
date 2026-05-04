@@ -14,12 +14,24 @@ export const CONFIG_FILENAME = 'apm.config.json';
 const DEFAULT_CONFIG: ApmConfig = {
   schemaVersion: '1.0',
   sources: [
+    // ── Local project source (always active) ────────────────────────────
     {
-      name: 'local',
-      type: 'local',
-      path: '.',
+      name:        'local',
+      type:        'local',
+      path:        '.',
       description: 'Local project .agents/ directory',
-      enabled: true,
+      enabled:     true,
+    },
+    // ── Official Kozen registry ───────────────────────────────────────────
+    {
+      name:        'kozen',
+      type:        'github',
+      url:         'https://github.com/kozen-labs/agentic',
+      ref:         'main',
+      skillsPath:  '.agents/skills',
+      agentsPath:  '.agents/agents',
+      description: 'Official Kozen community skill and agent registry',
+      enabled:     false,
     },
     // ── Community repositories (disabled until you enable them) ──────────
     {
@@ -31,6 +43,22 @@ const DEFAULT_CONFIG: ApmConfig = {
       skillsPath:  '.agents/skills',
       agentsPath:  '.agents/agents',
       description: 'Official MongoDB SDLC Skills Pack (28 skills, 5 agents)',
+      enabled:     false,
+    },
+    {
+      name:        'vercel-skills',
+      type:        'skills-sh',
+      url:         'https://github.com/vercel-labs/skills',
+      namespace:   'vercel',
+      skillsPath:  'skills',
+      description: 'Vercel Labs skills (skills.sh-compatible format)',
+      enabled:     false,
+    },
+    {
+      name:        'awesome-claude',
+      type:        'awesome-claude',
+      url:         'https://awesomeclaude.ai/api/skills.json',
+      description: 'AwesomeClaude.ai curated skill catalog',
       enabled:     false,
     },
     {
@@ -60,17 +88,8 @@ const DEFAULT_CONFIG: ApmConfig = {
       description: 'Anthropic official skills',
       enabled:     false,
     },
-    {
-      name:        'skilluse',
-      type:        'github',
-      url:         'https://github.com/skilluse/skilluse',
-      namespace:   'skilluse',
-      skillsPath:  '.claude/skills',
-      description: 'SkillUse community skill registry',
-      enabled:     false,
-    },
   ],
-  defaultProvider: 'claude',
+  defaultProvider: 'standard',
   defaultScope: 'global',
 };
 
