@@ -1,9 +1,9 @@
 import chalk from 'chalk';
-import { ApmRegistry } from '../../core/registry';
-import { ApmLockManager } from '../../core/lock';
-import { InstalledPackage } from '../../models/package.model';
-import { PackageType } from '../../models/provider.model';
-import * as log from '../../utils/log';
+import { ApmRegistry } from './registry';
+import { ApmLockManager } from './lock';
+import { InstalledPackage } from '../models/package.model';
+import { PackageType } from '../models/provider.model';
+import * as log from '../utils/log';
 
 export function outdatedCommand(projectRoot: string, type: PackageType | 'all'): void {
   const registry = new ApmRegistry(projectRoot);
@@ -46,7 +46,6 @@ export function outdatedCommand(projectRoot: string, type: PackageType | 'all'):
     console.log();
   }
 
-  // Persist the full snapshot so the lock always reflects the latest scan.
   if (allInstalled.length) {
     lock.writeAll(allInstalled);
     log.detail(`Lock written: apm.lock.json`);

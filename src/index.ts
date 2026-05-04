@@ -2,7 +2,7 @@ import fs                               from 'fs';
 import path                            from 'path';
 import { KzModule, IConfig, IDependency } from '@kozen/engine';
 import { bootstrap }      from './core/bootstrap';
-import { findProjectRoot } from './platform/system';
+import { findProjectRoot } from './utils/system';
 import iocJson             from './configs/ioc.json';
 import cliJson             from './configs/cli.json';
 import mcpJson             from './configs/mcp.json';
@@ -80,7 +80,7 @@ export default ApmModule;
 
 export { ApmRegistry }         from './core/registry';
 export { ApmInstaller }        from './core/installer';
-export { ApmManifestManager }  from './core/manifest';
+export { ApmManifestManager }  from './core/manifest-manager';
 export { ApmConfigManager }    from './core/config';
 export { ApmLockManager }      from './core/lock';
 export { bootstrap }           from './core/bootstrap';
@@ -120,7 +120,7 @@ export { ContextPlugin } from './plugins/components/context';
 
 // ── Utilities and models ───────────────────────────────────────────────────
 export { parseFrontmatter, stripFrontmatter } from './utils/frontmatter';
-export { findProjectRoot, getOs }             from './platform/system';
+export { findProjectRoot, getOs }             from './utils/system';
 export * from './models/package.model';
 export * from './models/provider.model';
 export * from './models/config.model';

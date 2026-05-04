@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import { ApmRegistry } from '../../core/registry';
-import { ApmLockManager } from '../../core/lock';
-import { InstalledPackage } from '../../models/package.model';
-import { PackageType, Provider, Scope } from '../../models/provider.model';
-import { resolveInstallPath } from '../../plugins/providers/path.resolver';
-import * as log from '../../utils/log';
+import { ApmRegistry } from './registry';
+import { ApmLockManager } from './lock';
+import { InstalledPackage } from '../models/package.model';
+import { PackageType, Provider, Scope } from '../models/provider.model';
+import { resolveInstallPath } from '../plugins/providers/path.resolver';
+import * as log from '../utils/log';
 
 export function statusCommand(projectRoot: string, type: PackageType | 'all'): void {
   const registry = new ApmRegistry(projectRoot);
@@ -44,7 +44,6 @@ export function statusCommand(projectRoot: string, type: PackageType | 'all'): v
     console.log();
   }
 
-  // Persist the full snapshot to apm.lock.json.
   if (allInstalled.length) {
     lock.writeAll(allInstalled);
     log.detail(`Lock written: apm.lock.json`);

@@ -1,7 +1,7 @@
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
-import { getOs, getHomeDir, findProjectRoot, isSamePath } from '../../src/platform/system';
+import { getOs, getHomeDir, findProjectRoot, isSamePath } from '../../src/utils/system';
 
 describe('getOs()', () => {
   it('returns a recognised OS string', () => {

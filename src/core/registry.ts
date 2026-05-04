@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import { ApmPackage, InstalledPackage } from '../models/package.model';
 import { PackageType, Scope } from '../models/provider.model';
-import { ApmManifestManager } from './manifest';
+import { ApmManifestManager } from './manifest-manager';
 import { ApmConfigManager } from './config';
 import * as PluginRegistry from './PluginRegistry';
 import { bareSkillName } from '../utils/pkg';

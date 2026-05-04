@@ -1,8 +1,8 @@
-import * as PluginRegistry from '../../core/PluginRegistry';
-import { ApmConfigManager } from '../../core/config';
-import * as log from '../../utils/log';
 import os from 'os';
 import path from 'path';
+import * as PluginRegistry from './PluginRegistry';
+import { ApmConfigManager } from './config';
+import * as log from '../utils/log';
 
 const DEFAULT_CACHE_DIR = path.join(os.homedir(), 'apm.cache');
 
@@ -14,7 +14,7 @@ export function refreshCommand(projectRoot: string, sourceName?: string): void {
     : allSources.filter(s => s.type !== 'local');
 
   if (sourceName && targets.length === 0) {
-    log.error(`Source "${sourceName}" not found in apm.config.json`);
+    log.error(`Source "${sourceName}" not found in apm.pack.json`);
     process.exit(1);
   }
 

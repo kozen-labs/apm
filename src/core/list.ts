@@ -1,8 +1,8 @@
 import chalk from 'chalk';
-import { ApmRegistry } from '../../core/registry';
-import { ApmPackage } from '../../models/package.model';
-import { PackageType } from '../../models/provider.model';
-import * as log from '../../utils/log';
+import { ApmRegistry } from './registry';
+import { ApmPackage } from '../models/package.model';
+import { PackageType } from '../models/provider.model';
+import * as log from '../utils/log';
 
 export function listCommand(projectRoot: string, type: PackageType | 'all'): void {
   const registry = new ApmRegistry(projectRoot);

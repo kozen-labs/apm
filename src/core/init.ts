@@ -1,14 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import inquirer from 'inquirer';
-import { ApmConfigManager, CONFIG_FILENAME } from '../../core/config';
-import { ApmLockManager, LOCK_FILENAME } from '../../core/lock';
-import { ApmManifestManager } from '../../core/manifest';
-import * as log from '../../utils/log';
+import { ApmConfigManager, CONFIG_FILENAME } from './config';
+import { ApmLockManager, LOCK_FILENAME } from './lock';
+import { ApmManifestManager } from './manifest-manager';
+import * as log from '../utils/log';
 
 interface InitOptions {
-  yes:        boolean;
-  force:      boolean;
+  yes:         boolean;
+  force:       boolean;
   configPath?: string;
 }
 

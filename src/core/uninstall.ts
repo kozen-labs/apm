@@ -1,8 +1,8 @@
-import { ApmRegistry } from '../../core/registry';
-import { ApmInstaller } from '../../core/installer';
-import { ApmLockManager } from '../../core/lock';
-import { PackageType, Provider, Scope } from '../../models/provider.model';
-import * as log from '../../utils/log';
+import { ApmRegistry } from './registry';
+import { ApmInstaller } from './installer';
+import { ApmLockManager } from './lock';
+import { PackageType, Provider, Scope } from '../models/provider.model';
+import * as log from '../utils/log';
 
 export function uninstallCommand(
   names: string[],
@@ -30,7 +30,6 @@ export function uninstallCommand(
   const installer = new ApmInstaller(projectRoot);
   const result    = installer.uninstall(toRemove, type, provider, scope, customDir);
 
-  // Remove successfully uninstalled packages from the lock.
   if (result.succeeded.length) {
     try {
       new ApmLockManager(projectRoot).removeEntries(result.succeeded, provider, scope);

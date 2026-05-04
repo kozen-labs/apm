@@ -63,7 +63,7 @@ OPTIONS
   --source        Source name filter for apm:refresh. Refreshes all enabled
                   remote sources when omitted.
 
-  --config        Path to apm.pack.json. Overrides APM_CONFIG env var.
+  --config        Path to apm.pack.json. Overrides KOZEN_APM_CONFIG env var.
                   The project root is derived as the directory containing this file.
 
   --yes           Skip interactive prompts and accept defaults (apm:setup).
@@ -73,7 +73,7 @@ OPTIONS
 ENVIRONMENT VARIABLES
 ---------------------
 
-  APM_CONFIG        Path to apm.pack.json. Useful in CI or monorepos where the
+  KOZEN_APM_CONFIG        Path to apm.pack.json. Useful in CI or monorepos where the
                     config lives outside the working directory. The project root
                     is derived as the directory containing the file.
                     --config=<path> on the command line takes precedence.

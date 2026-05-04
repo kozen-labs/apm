@@ -101,14 +101,14 @@ const DEFAULT_CONFIG: ApmConfig = {
  *
  * Config file resolution priority:
  *   1. Explicit `configPath` constructor argument
- *   2. APM_CONFIG environment variable (absolute or relative to projectRoot)
+ *   2. KOZEN_APM_CONFIG environment variable (absolute or relative to projectRoot)
  *   3. <projectRoot>/apm.pack.json (default)
  */
 export class ApmConfigManager {
   private configPath: string;
 
   constructor(private readonly projectRoot: string, configPath?: string) {
-    const override = configPath ?? process.env.APM_CONFIG;
+    const override = configPath ?? process.env.KOZEN_APM_CONFIG;
     this.configPath = override
       ? path.resolve(projectRoot, override)
       : path.join(projectRoot, CONFIG_FILENAME);

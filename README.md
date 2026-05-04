@@ -146,10 +146,10 @@ npx kozen --moduleLoad=@kozen/apm --action=apm:refresh
 | `--provider` | `standard` | Target AI tool: `standard`, `claude`, `cursor`, `vscode`, `windsurf` |
 | `--scope` | `local` | Install scope: `local` (current project) or `global` (home directory) |
 | `--packages` | _(all)_ | Comma-separated package names. Omit to operate on all packages. |
-| `--config` | _(auto-detected)_ | Path to `apm.pack.json`. Project root is derived as its parent directory. Overrides `APM_CONFIG` env var. |
+| `--config` | _(auto-detected)_ | Path to `apm.pack.json`. Project root is derived as its parent directory. Overrides `KOZEN_APM_CONFIG` env var. |
 | `--projectRoot` | _(auto-detected)_ | Absolute path to the project root. Ignored when `--config` is set. |
 
-The `APM_CONFIG` environment variable is the persistent equivalent of `--config`: set it in `.env` or CI to point to a shared or non-standard config location. `--config` on the command line always takes precedence over `APM_CONFIG`.
+The `KOZEN_APM_CONFIG` environment variable is the persistent equivalent of `--config`: set it in `.env` or CI to point to a shared or non-standard config location. `--config` on the command line always takes precedence over `KOZEN_APM_CONFIG`.
 
 ---
 
@@ -252,7 +252,7 @@ The two values are coupled: the correct pairing depends on where you want skills
 | `local` | `claude` | `.claude/skills/` inside the auto-detected project root |
 | `local` | `cursor` | `.cursor/rules/` inside the auto-detected project root |
 
-When `scope` is `local`, APM resolves the project root by walking up the file tree from the working directory until it finds a `.agents/` directory or an `apm.pack.json` file. Pass `--config=<path>` (or set `APM_CONFIG`) to use a config file in a non-standard location; the project root is then the directory containing that file.
+When `scope` is `local`, APM resolves the project root by walking up the file tree from the working directory until it finds a `.agents/` directory or an `apm.pack.json` file. Pass `--config=<path>` (or set `KOZEN_APM_CONFIG`) to use a config file in a non-standard location; the project root is then the directory containing that file.
 ```
 
 ---

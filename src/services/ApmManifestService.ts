@@ -2,7 +2,7 @@ import { BaseService } from '@kozen/engine';
 import { IIoC } from '@kozen/engine';
 import { ILogger } from '@kozen/engine';
 import { ApmManifest } from '../models/package.model';
-import { ApmManifestManager } from '../core/manifest';
+import { ApmManifestManager } from '../core/manifest-manager';
 import { ApmConfigManager } from '../core/config';
 
 export class ApmManifestService extends BaseService {

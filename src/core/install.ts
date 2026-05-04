@@ -1,8 +1,8 @@
-import { ApmRegistry } from '../../core/registry';
-import { ApmInstaller } from '../../core/installer';
-import { ApmLockManager } from '../../core/lock';
-import { PackageType, Provider, Scope } from '../../models/provider.model';
-import * as log from '../../utils/log';
+import { ApmRegistry } from './registry';
+import { ApmInstaller } from './installer';
+import { ApmLockManager } from './lock';
+import { PackageType, Provider, Scope } from '../models/provider.model';
+import * as log from '../utils/log';
 
 export function installCommand(
   names: string[],
@@ -31,7 +31,6 @@ export function installCommand(
   const installer = new ApmInstaller(projectRoot);
   const result    = installer.install(toInstall, provider, scope, customDir);
 
-  // Update apm.lock.json with the fresh state for this provider+scope.
   if (result.succeeded.length) {
     try {
       const installed = registry.getInstalled(type)

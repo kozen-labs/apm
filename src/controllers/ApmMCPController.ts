@@ -2,7 +2,7 @@ import { MCPController, VCategory } from '@kozen/engine';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { z } from 'zod';
 import { PackageType, Provider, Scope } from '../models/provider.model';
-import { findProjectRoot } from '../platform/system';
+import { findProjectRoot } from '../utils/system';
 import type { ApmRegistryService }  from '../services/ApmRegistryService';
 import type { ApmInstallerService } from '../services/ApmInstallerService';
 import type { ApmLockService }      from '../services/ApmLockService';

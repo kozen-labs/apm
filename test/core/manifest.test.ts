@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ApmManifestManager } from '../../src/core/manifest';
+import { ApmManifestManager } from '../../src/core/manifest-manager';
 import { PackageType } from '../../src/models/provider.model';
 
 function makeTmpDir(): string {

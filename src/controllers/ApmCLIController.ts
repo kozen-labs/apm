@@ -1,15 +1,15 @@
 import path from 'path';
 import { KzController, VCategory } from '@kozen/engine';
 import { PackageType, Provider, Scope } from '../models/provider.model';
-import { findProjectRoot } from '../platform/system';
-import { installCommand }   from '../cli/commands/install';
-import { uninstallCommand } from '../cli/commands/uninstall';
-import { listCommand }      from '../cli/commands/list';
-import { statusCommand }    from '../cli/commands/status';
-import { outdatedCommand }  from '../cli/commands/outdated';
-import { initCommand }      from '../cli/commands/init';
-import { manifestCommand }  from '../cli/commands/manifest';
-import { refreshCommand }   from '../cli/commands/refresh';
+import { findProjectRoot } from '../utils/system';
+import { installCommand }   from '../core/install';
+import { uninstallCommand } from '../core/uninstall';
+import { listCommand }      from '../core/list';
+import { statusCommand }    from '../core/status';
+import { outdatedCommand }  from '../core/outdated';
+import { initCommand }      from '../core/init';
+import { manifestCommand }  from '../core/manifest';
+import { refreshCommand }   from '../core/refresh';
 
 /**
  * ApmCLIController — Kozen CLI entry point for all APM actions.
@@ -107,7 +107,7 @@ Install / Uninstall Options:
 
 Init Options:
   --yes                                        Accept all defaults
-  --config=<path>                              Path to apm.pack.json (overrides APM_CONFIG env var)
+  --config=<path>                              Path to apm.pack.json (overrides KOZEN_APM_CONFIG env var)
   --force                                      Overwrite existing apm.pack.json
 
 Refresh Options:

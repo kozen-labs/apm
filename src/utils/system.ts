@@ -17,15 +17,15 @@ export function getHomeDir(): string {
 
 /**
  * Walk up from `startDir` looking for a directory that contains `.agents/`
- * or `apm.pack.json`. If APM_CONFIG env var points to an existing file,
+ * or `apm.pack.json`. If KOZEN_APM_CONFIG env var points to an existing file,
  * its directory is returned immediately.
  *
  * Falls back to the directory two levels above __dirname (the npm package root)
  * when run as a globally installed binary.
  */
 export function findProjectRoot(startDir: string = process.cwd()): string {
-  // APM_CONFIG env var takes highest priority
-  const envConfig = process.env.APM_CONFIG;
+  // KOZEN_APM_CONFIG env var takes highest priority
+  const envConfig = process.env.KOZEN_APM_CONFIG;
   if (envConfig) {
     const resolved = path.resolve(envConfig);
     if (fs.existsSync(resolved)) return path.dirname(resolved);
