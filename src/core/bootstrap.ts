@@ -1,18 +1,18 @@
 import { registerRepository, registerProvider, registerComponent } from './PluginRegistry';
 
 // ── Repository strategies (src/plugins/repositories/) ─────────────────────────
-import { LocalRepositoryStrategy }          from '../plugins/repositories/local';
-import { GitHubRepositoryStrategy }         from '../plugins/repositories/github';
-import { NpmRepositoryStrategy }            from '../plugins/repositories/npm';
-import { SkillsShRepositoryStrategy }       from '../plugins/repositories/skillssh';
-import { AwesomeClaudeRegistryStrategy }    from '../plugins/repositories/awesomeclaude';
+import { LocalRepositoryStrategy }          from '../plugins/repositories/LocalRepositoryStrategy';
+import { GitHubRepositoryStrategy }         from '../plugins/repositories/GitHubRepositoryStrategy';
+import { NpmRepositoryStrategy }            from '../plugins/repositories/NpmRepositoryStrategy';
+import { SkillsShRepositoryStrategy }       from '../plugins/repositories/SkillsShRepositoryStrategy';
+import { AwesomeClaudeRegistryStrategy }    from '../plugins/repositories/AwesomeClaudeRegistryStrategy';
 
 // ── Provider strategies (src/plugins/providers/) ──────────────────────────────
-import { StandardProviderStrategy } from '../plugins/providers/standard';
-import { ClaudeProviderStrategy }   from '../plugins/providers/claude';
-import { CursorProviderStrategy }   from '../plugins/providers/cursor';
-import { VscodeProviderStrategy }   from '../plugins/providers/vscode';
-import { WindsurfProviderStrategy } from '../plugins/providers/windsurf';
+import { StandardProviderStrategy } from '../plugins/providers/StandardProviderStrategy';
+import { ClaudeProviderStrategy }   from '../plugins/providers/ClaudeProviderStrategy';
+import { CursorProviderStrategy }   from '../plugins/providers/CursorProviderStrategy';
+import { VscodeProviderStrategy }   from '../plugins/providers/VscodeProviderStrategy';
+import { WindsurfProviderStrategy } from '../plugins/providers/WindsurfProviderStrategy';
 
 // ── Component plugins (src/plugins/components/) ───────────────────────────────
 import { SkillPlugin }   from '../plugins/components/SkillPlugin';

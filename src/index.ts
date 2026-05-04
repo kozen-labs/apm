@@ -92,18 +92,18 @@ export { type IProviderStrategy }   from './plugins/providers/IProviderStrategy'
 export { type IComponentPlugin }    from './plugins/components/IComponentPlugin';
 
 // ── Repository strategies ──────────────────────────────────────────────────
-export { LocalRepositoryStrategy }       from './plugins/repositories/local';
-export { GitHubRepositoryStrategy }      from './plugins/repositories/github';
-export { NpmRepositoryStrategy }         from './plugins/repositories/npm';
-export { SkillsShRepositoryStrategy }    from './plugins/repositories/skillssh';
-export { AwesomeClaudeRegistryStrategy } from './plugins/repositories/awesomeclaude';
+export { LocalRepositoryStrategy }       from './plugins/repositories/LocalRepositoryStrategy';
+export { GitHubRepositoryStrategy }      from './plugins/repositories/GitHubRepositoryStrategy';
+export { NpmRepositoryStrategy }         from './plugins/repositories/NpmRepositoryStrategy';
+export { SkillsShRepositoryStrategy }    from './plugins/repositories/SkillsShRepositoryStrategy';
+export { AwesomeClaudeRegistryStrategy } from './plugins/repositories/AwesomeClaudeRegistryStrategy';
 
 // ── Provider strategies ────────────────────────────────────────────────────
-export { StandardProviderStrategy } from './plugins/providers/standard';
-export { ClaudeProviderStrategy }   from './plugins/providers/claude';
-export { CursorProviderStrategy }   from './plugins/providers/cursor';
-export { VscodeProviderStrategy }   from './plugins/providers/vscode';
-export { WindsurfProviderStrategy } from './plugins/providers/windsurf';
+export { StandardProviderStrategy } from './plugins/providers/StandardProviderStrategy';
+export { ClaudeProviderStrategy }   from './plugins/providers/ClaudeProviderStrategy';
+export { CursorProviderStrategy }   from './plugins/providers/CursorProviderStrategy';
+export { VscodeProviderStrategy }   from './plugins/providers/VscodeProviderStrategy';
+export { WindsurfProviderStrategy } from './plugins/providers/WindsurfProviderStrategy';
 export {
   resolveInstallPath,
   allSkillLocations,
@@ -113,10 +113,11 @@ export {
 } from './plugins/providers/path.resolver';
 
 // ── Component plugins ──────────────────────────────────────────────────────
-export { SkillPlugin }   from './plugins/components/SkillPlugin';
-export { AgentPlugin }   from './plugins/components/AgentPlugin';
-export { HookPlugin }    from './plugins/components/HookPlugin';
-export { ContextPlugin } from './plugins/components/ContextPlugin';
+export { BaseComponentPlugin } from './plugins/components/BaseComponentPlugin';
+export { SkillPlugin }         from './plugins/components/SkillPlugin';
+export { AgentPlugin }         from './plugins/components/AgentPlugin';
+export { HookPlugin }          from './plugins/components/HookPlugin';
+export { ContextPlugin }       from './plugins/components/ContextPlugin';
 
 // ── Utilities and models ───────────────────────────────────────────────────
 export { parseFrontmatter, stripFrontmatter } from './utils/frontmatter';

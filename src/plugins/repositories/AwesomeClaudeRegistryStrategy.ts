@@ -6,7 +6,7 @@ import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
 import { PackageType, inferGroup } from '../../models/provider.model';
 import { IRepositoryStrategy } from './IRepositoryStrategy';
-import { GitHubRepositoryStrategy } from './github';
+import { GitHubRepositoryStrategy } from './GitHubRepositoryStrategy';
 
 const CATALOG_STALE_MS = 6 * 60 * 60 * 1000; // 6 h
 

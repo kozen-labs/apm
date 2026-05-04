@@ -5,7 +5,7 @@ import { execSync } from 'child_process';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
 import { IRepositoryStrategy } from './IRepositoryStrategy';
-import { LocalRepositoryStrategy } from './local';
+import { LocalRepositoryStrategy } from './LocalRepositoryStrategy';
 
 const STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
 

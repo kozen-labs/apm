@@ -1,86 +1,102 @@
 {
-  "apm:config": {
-    "target": "ApmConfigService",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../services",
-    "dependencies": [
-      { "key": "assistant",   "target": "IoC",               "type": "ref" },
-      { "key": "logger",      "target": "logger:service",     "type": "ref" },
-      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
-    ]
+  "apm:plugin:component:skill": {
+    "target":       "SkillPlugin",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/components",
+    "dependencies": []
   },
-  "apm:registry": {
-    "target": "ApmRegistryService",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../services",
-    "dependencies": [
-      { "key": "assistant",   "target": "IoC",               "type": "ref" },
-      { "key": "logger",      "target": "logger:service",     "type": "ref" },
-      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
-    ]
+  "apm:plugin:component:agent": {
+    "target":       "AgentPlugin",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/components",
+    "dependencies": []
   },
-  "apm:installer": {
-    "target": "ApmInstallerService",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../services",
-    "dependencies": [
-      { "key": "assistant",   "target": "IoC",               "type": "ref" },
-      { "key": "logger",      "target": "logger:service",     "type": "ref" },
-      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
-    ]
+  "apm:plugin:component:hook": {
+    "target":       "HookPlugin",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/components",
+    "dependencies": []
   },
-  "apm:manifest": {
-    "target": "ApmManifestService",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../services",
-    "dependencies": [
-      { "key": "assistant",   "target": "IoC",               "type": "ref" },
-      { "key": "logger",      "target": "logger:service",     "type": "ref" },
-      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
-    ]
-  },
-  "apm:lock": {
-    "target": "ApmLockService",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../services",
-    "dependencies": [
-      { "key": "assistant",   "target": "IoC",               "type": "ref" },
-      { "key": "logger",      "target": "logger:service",     "type": "ref" },
-      { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
-    ]
+  "apm:plugin:component:context": {
+    "target":       "ContextPlugin",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/components",
+    "dependencies": []
   },
 
-  "apm:component:skill": {
-    "target": "SkillPlugin",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../plugins/components",
+  "apm:plugin:provider:standard": {
+    "target":       "StandardProviderStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/providers",
     "dependencies": []
   },
-  "apm:component:agent": {
-    "target": "AgentPlugin",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../plugins/components",
+  "apm:plugin:provider:claude": {
+    "target":       "ClaudeProviderStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/providers",
     "dependencies": []
   },
-  "apm:component:hook": {
-    "target": "HookPlugin",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../plugins/components",
+  "apm:plugin:provider:cursor": {
+    "target":       "CursorProviderStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/providers",
     "dependencies": []
   },
-  "apm:component:context": {
-    "target": "ContextPlugin",
-    "type": "class",
-    "lifetime": "singleton",
-    "path": "../plugins/components",
+  "apm:plugin:provider:vscode": {
+    "target":       "VscodeProviderStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/providers",
+    "dependencies": []
+  },
+  "apm:plugin:provider:windsurf": {
+    "target":       "WindsurfProviderStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/providers",
+    "dependencies": []
+  },
+
+  "apm:plugin:repository:local": {
+    "target":       "LocalRepositoryStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/repositories",
+    "dependencies": []
+  },
+  "apm:plugin:repository:github": {
+    "target":       "GitHubRepositoryStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/repositories",
+    "dependencies": []
+  },
+  "apm:plugin:repository:npm": {
+    "target":       "NpmRepositoryStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/repositories",
+    "dependencies": []
+  },
+  "apm:plugin:repository:skillssh": {
+    "target":       "SkillsShRepositoryStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/repositories",
+    "dependencies": []
+  },
+  "apm:plugin:repository:awesomeclaude": {
+    "target":       "AwesomeClaudeRegistryStrategy",
+    "type":         "class",
+    "lifetime":     "singleton",
+    "path":         "../plugins/repositories",
     "dependencies": []
   }
 }

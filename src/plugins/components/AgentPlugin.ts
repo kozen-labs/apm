@@ -3,7 +3,7 @@ import path from 'path';
 import { ApmPackage, InstalledMeta } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
 import { parseFrontmatter } from '../../utils/frontmatter';
-import { IComponentPlugin } from './IComponentPlugin';
+import { BaseComponentPlugin } from './BaseComponentPlugin';
 
 /**
  * AgentPlugin — component plugin for agent .md definition files.
@@ -19,7 +19,7 @@ import { IComponentPlugin } from './IComponentPlugin';
  * Default install layout:
  *   <installDir>/my-agent.md  (file copy)
  */
-export class AgentPlugin implements IComponentPlugin {
+export class AgentPlugin extends BaseComponentPlugin {
   readonly type          = PackageType.AGENT;
   readonly installSubdir = 'agents';
 
@@ -41,7 +41,7 @@ export class AgentPlugin implements IComponentPlugin {
     } as Partial<ApmPackage> & { _baseName: string };
   }
 
-  copyTo(srcPath: string, bareName: string, installDir: string): void {
+  copyTo(srcPath: string, _bareName: string, installDir: string): void {
     const dst = path.join(installDir, path.basename(srcPath));
     if (this.samePath(dst, srcPath)) return;
     fs.copyFileSync(srcPath, dst);

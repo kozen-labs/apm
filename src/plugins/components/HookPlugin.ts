@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { ApmPackage, InstalledMeta } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
-import { IComponentPlugin } from './IComponentPlugin';
+import { BaseComponentPlugin } from './BaseComponentPlugin';
 
 /**
  * HookPlugin — component plugin for hook scripts.
@@ -13,7 +13,7 @@ import { IComponentPlugin } from './IComponentPlugin';
  *
  * Full implementation is planned for Phase 10.
  */
-export class HookPlugin implements IComponentPlugin {
+export class HookPlugin extends BaseComponentPlugin {
   readonly type          = PackageType.HOOK;
   readonly installSubdir = 'hooks';
 

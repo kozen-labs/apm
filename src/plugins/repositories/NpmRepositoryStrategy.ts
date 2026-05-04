@@ -4,7 +4,7 @@ import { execSync } from 'child_process';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
 import { IRepositoryStrategy } from './IRepositoryStrategy';
-import { LocalRepositoryStrategy } from './local';
+import { LocalRepositoryStrategy } from './LocalRepositoryStrategy';
 
 /**
  * NpmRepositoryStrategy — installs an npm package into a local cache directory

@@ -3,7 +3,7 @@ import path from 'path';
 import { ApmPackage, InstalledMeta } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
 import { parseFrontmatter } from '../../utils/frontmatter';
-import { IComponentPlugin } from './IComponentPlugin';
+import { BaseComponentPlugin } from './BaseComponentPlugin';
 
 /**
  * SkillPlugin — component plugin for ks-* skill directories.
@@ -20,7 +20,7 @@ import { IComponentPlugin } from './IComponentPlugin';
  * Default install layout (standard, claude providers):
  *   <installDir>/ks-mongodb-core/  (directory copy)
  */
-export class SkillPlugin implements IComponentPlugin {
+export class SkillPlugin extends BaseComponentPlugin {
   readonly type        = PackageType.SKILL;
   readonly installSubdir = 'skills';
 

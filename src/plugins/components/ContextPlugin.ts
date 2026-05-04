@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { ApmPackage, InstalledMeta } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
-import { IComponentPlugin } from './IComponentPlugin';
+import { BaseComponentPlugin } from './BaseComponentPlugin';
 
 /**
  * ContextPlugin — component plugin for context definition files.
@@ -14,7 +14,7 @@ import { IComponentPlugin } from './IComponentPlugin';
  * Full implementation is planned for a future phase.
  * This stub registers the component type so the CLI can enumerate it.
  */
-export class ContextPlugin implements IComponentPlugin {
+export class ContextPlugin extends BaseComponentPlugin {
   readonly type          = PackageType.CONTEXT;
   readonly installSubdir = 'contexts';
 

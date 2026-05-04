@@ -5,7 +5,7 @@ import os from 'os';
 jest.mock('child_process', () => ({ execSync: jest.fn() }));
 import { execSync } from 'child_process';
 
-import { NpmRepositoryStrategy } from '../../src/plugins/repositories/npm';
+import { NpmRepositoryStrategy } from '../../src/plugins/repositories/NpmRepositoryStrategy';
 import { PackageType } from '../../src/models/provider.model';
 import type { ApmSource } from '../../src/models/config.model';
 import { bootstrap } from '../../src/core/bootstrap';

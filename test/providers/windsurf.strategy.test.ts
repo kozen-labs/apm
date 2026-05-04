@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { WindsurfProviderStrategy } from '../../src/plugins/providers/windsurf';
+import { WindsurfProviderStrategy } from '../../src/plugins/providers/WindsurfProviderStrategy';
 import { PackageType, Provider, Scope } from '../../src/models/provider.model';
 import type { ApmPackage } from '../../src/models/package.model';
 
