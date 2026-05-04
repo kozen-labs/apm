@@ -83,9 +83,11 @@ export { type IProviderStrategy }   from './plugins/providers/IProviderStrategy'
 export { type IComponentPlugin }    from './plugins/components/IComponentPlugin';
 
 // ── Repository strategies ──────────────────────────────────────────────────
-export { LocalRepositoryStrategy }  from './plugins/repositories/local';
-export { GitHubRepositoryStrategy } from './plugins/repositories/github';
-export { NpmRepositoryStrategy }    from './plugins/repositories/npm';
+export { LocalRepositoryStrategy }       from './plugins/repositories/local';
+export { GitHubRepositoryStrategy }      from './plugins/repositories/github';
+export { NpmRepositoryStrategy }         from './plugins/repositories/npm';
+export { SkillsShRepositoryStrategy }    from './plugins/repositories/skillssh';
+export { AwesomeClaudeRegistryStrategy } from './plugins/repositories/awesomeclaude';
 
 // ── Provider strategies ────────────────────────────────────────────────────
 export { StandardProviderStrategy } from './plugins/providers/standard';

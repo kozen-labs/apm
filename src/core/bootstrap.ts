@@ -1,9 +1,11 @@
 import { registerRepository, registerProvider, registerComponent } from './PluginRegistry';
 
 // ── Repository strategies (src/plugins/repositories/) ─────────────────────────
-import { LocalRepositoryStrategy }  from '../plugins/repositories/local';
-import { GitHubRepositoryStrategy } from '../plugins/repositories/github';
-import { NpmRepositoryStrategy }    from '../plugins/repositories/npm';
+import { LocalRepositoryStrategy }          from '../plugins/repositories/local';
+import { GitHubRepositoryStrategy }         from '../plugins/repositories/github';
+import { NpmRepositoryStrategy }            from '../plugins/repositories/npm';
+import { SkillsShRepositoryStrategy }       from '../plugins/repositories/skillssh';
+import { AwesomeClaudeRegistryStrategy }    from '../plugins/repositories/awesomeclaude';
 
 // ── Provider strategies (src/plugins/providers/) ──────────────────────────────
 import { StandardProviderStrategy } from '../plugins/providers/standard';
@@ -40,6 +42,8 @@ export function bootstrap(): void {
   registerRepository(new LocalRepositoryStrategy());
   registerRepository(new GitHubRepositoryStrategy());
   registerRepository(new NpmRepositoryStrategy());
+  registerRepository(new SkillsShRepositoryStrategy());
+  registerRepository(new AwesomeClaudeRegistryStrategy());
 
   // ── Provider strategies ───────────────────────────────────────────────────
   registerProvider(new StandardProviderStrategy());

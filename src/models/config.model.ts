@@ -5,11 +5,13 @@
 
 /**
  * Supported source types.
- * local  — local filesystem directory.
- * github — GitHub repository fetched via git clone.
- * npm    — reserved for future npm package sources.
+ * local         — local filesystem directory.
+ * github        — GitHub repository fetched via git clone (APM directory format).
+ * npm           — npm package that bundles a .agents/ tree.
+ * skills-sh     — skills.sh-compatible GitHub repo (flat .md files per skill).
+ * awesome-claude — awesomeclaude.ai registry catalog (fetches JSON, clones on install).
  */
-export type SourceType = 'local' | 'github' | 'npm';
+export type SourceType = 'local' | 'github' | 'npm' | 'skills-sh' | 'awesome-claude';
 
 /**
  * A single package source entry in apm.config.json.

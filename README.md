@@ -182,30 +182,74 @@ The following MCP tools are registered:
 
 ## 🗂️ Configuration: `apm.config.json`
 
-`apm:setup` generates this file. The following example registers all three source types:
+`apm:setup` generates this file with all community sources pre-configured. Enable the sources you want by setting `"enabled": true` and running `apm:refresh`.
 
 ```json
 {
+  "defaultProvider": "standard",
+  "defaultScope": "global",
   "sources": [
     {
       "type": "local",
       "name": "local",
-      "path": ".agents"
+      "path": ".",
+      "description": "Local project .agents/ directory",
+      "enabled": true
     },
     {
       "type": "github",
-      "name": "mongodb-skills",
-      "repo": "mongodb/agent-skills",
-      "branch": "main",
-      "path": ".agents"
+      "name": "kozen",
+      "url": "https://github.com/kozen-labs/agentic",
+      "ref": "main",
+      "skillsPath": ".agents/skills",
+      "agentsPath": ".agents/agents",
+      "description": "Official Kozen community skill and agent registry",
+      "enabled": false
     },
     {
-      "type": "npm",
-      "name": "my-org-skills",
-      "package": "@my-org/agent-skills"
+      "type": "skills-sh",
+      "name": "vercel-skills",
+      "url": "https://github.com/vercel-labs/skills",
+      "namespace": "vercel",
+      "skillsPath": "skills",
+      "description": "Vercel Labs skills (skills.sh-compatible format)",
+      "enabled": false
+    },
+    {
+      "type": "awesome-claude",
+      "name": "awesome-claude",
+      "url": "https://awesomeclaude.ai/api/skills.json",
+      "description": "AwesomeClaude.ai curated skill catalog",
+      "enabled": false
     }
   ]
 }
+```
+
+### Source types
+
+| Type | Description |
+|---|---|
+| `local` | Local filesystem directory. The default source for packages in your project. |
+| `github` | GitHub repository in APM directory format (`.agents/skills/`, `.agents/agents/`). |
+| `npm` | npm package that bundles a `.agents/` tree. |
+| `skills-sh` | GitHub repository in skills.sh flat-file format (one `.md` file per skill). APM virtualises each file into a directory before installation. |
+| `awesome-claude` | AwesomeClaude.ai curated catalog. Fetches a JSON catalog on `refresh` and clones individual skill repos on install. |
+
+### Default provider and scope
+
+The `defaultProvider` and `defaultScope` fields control the install target when `--provider` and `--scope` are omitted from a command.
+
+The two values are coupled: the correct pairing depends on where you want skills to land.
+
+| `defaultScope` | Recommended `defaultProvider` | Where packages are installed |
+|---|---|---|
+| `global` | `standard` | `~/.agents/skills/` (provider-agnostic home directory) |
+| `global` | `claude` | `~/.claude/skills/` (Claude Code global directory) |
+| `local` | `claude` | `.claude/skills/` inside the auto-detected project root |
+| `local` | `cursor` | `.cursor/rules/` inside the auto-detected project root |
+
+When `scope` is `local`, APM resolves the project root automatically from the directory where the command is run, walking up the file tree until it finds a `package.json`, `apm.config.json`, or `.git` directory. You can override this with `--projectRoot=<path>`.
 ```
 
 ---
@@ -257,4 +301,14 @@ MIT
 
 - [Kozen Engine (@kozen/engine)](https://www.npmjs.com/package/@kozen/engine)
 - [Model Context Protocol specification](https://modelcontextprotocol.io/)
+- [Agent Skills Standard](https://agentskills.io/home)
+- [MongoDB Agent Skills](https://github.com/mongodb/agent-skills)
+- [skills.sh — skill registry and CLI for AI tools](https://skills.sh/)
+- [AwesomeClaude.ai — curated Claude skill directory](https://awesomeclaude.ai/awesome-claude-skills)
+- [Graphify: Knowledge Graphs for AI Coding Assistants](https://graphify.net/)
+- [LangChain Skills](https://www.langchain.com/blog/langchain-skills)
+- [Marketplace for ai tools](https://github.com/10gen/core-platforms-ai-tools)
+- [Agent Development Kit (ADK)](https://github.com/google/adk-python)
+- [Agentgateway is an open source proxy built on AI-native protocols (MCP & A2A) ](https://github.com/agentgateway/agentgateway)
+- [Skill validator](https://github.com/agent-ecosystem/skill-validator)
 - [Node.js](https://nodejs.org/)
