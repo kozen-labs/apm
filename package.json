@@ -12,8 +12,6 @@
     "bin/apm",
     "bin/apm.cmd",
     "cfg",
-    ".agents/skills",
-    ".agents/agents",
     ".agents/apm.json",
     "AGENTS.md",
     "README.md",
