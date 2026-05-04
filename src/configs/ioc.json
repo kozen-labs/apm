@@ -53,5 +53,34 @@
       { "key": "logger",      "target": "logger:service",     "type": "ref" },
       { "key": "projectRoot", "target": "apm:project-root",   "type": "ref" }
     ]
+  },
+
+  "apm:component:skill": {
+    "target": "SkillPlugin",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../plugins/components",
+    "dependencies": []
+  },
+  "apm:component:agent": {
+    "target": "AgentPlugin",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../plugins/components",
+    "dependencies": []
+  },
+  "apm:component:hook": {
+    "target": "HookPlugin",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../plugins/components",
+    "dependencies": []
+  },
+  "apm:component:context": {
+    "target": "ContextPlugin",
+    "type": "class",
+    "lifetime": "singleton",
+    "path": "../plugins/components",
+    "dependencies": []
   }
 }

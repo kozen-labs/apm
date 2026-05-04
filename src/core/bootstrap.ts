@@ -15,10 +15,10 @@ import { VscodeProviderStrategy }   from '../plugins/providers/vscode';
 import { WindsurfProviderStrategy } from '../plugins/providers/windsurf';
 
 // ── Component plugins (src/plugins/components/) ───────────────────────────────
-import { SkillPlugin }   from '../plugins/components/skill';
-import { AgentPlugin }   from '../plugins/components/agent';
-import { HookPlugin }    from '../plugins/components/hook';
-import { ContextPlugin } from '../plugins/components/context';
+import { SkillPlugin }   from '../plugins/components/SkillPlugin';
+import { AgentPlugin }   from '../plugins/components/AgentPlugin';
+import { HookPlugin }    from '../plugins/components/HookPlugin';
+import { ContextPlugin } from '../plugins/components/ContextPlugin';
 
 let bootstrapped = false;
 

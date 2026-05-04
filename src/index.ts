@@ -113,10 +113,10 @@ export {
 } from './plugins/providers/path.resolver';
 
 // ── Component plugins ──────────────────────────────────────────────────────
-export { SkillPlugin }   from './plugins/components/skill';
-export { AgentPlugin }   from './plugins/components/agent';
-export { HookPlugin }    from './plugins/components/hook';
-export { ContextPlugin } from './plugins/components/context';
+export { SkillPlugin }   from './plugins/components/SkillPlugin';
+export { AgentPlugin }   from './plugins/components/AgentPlugin';
+export { HookPlugin }    from './plugins/components/HookPlugin';
+export { ContextPlugin } from './plugins/components/ContextPlugin';
 
 // ── Utilities and models ───────────────────────────────────────────────────
 export { parseFrontmatter, stripFrontmatter } from './utils/frontmatter';
