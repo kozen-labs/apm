@@ -1,3 +1,5 @@
+import fs                               from 'fs';
+import path                            from 'path';
 import { KzModule, IConfig, IDependency } from '@kozen/engine';
 import { bootstrap }      from './core/bootstrap';
 import { findProjectRoot } from './platform/system';
@@ -18,10 +20,17 @@ export class ApmModule extends KzModule {
     super(dependency);
     this.metadata.alias = 'apm';
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const pkg = require('../package.json') as { version: string; description: string };
+      const pkgPath = path.resolve(__dirname, '../package.json');
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
+        name: string; version: string; description: string;
+        author: string; license: string; homepage: string;
+      };
+      this.metadata.name        = pkg.name;
       this.metadata.version     = pkg.version;
       this.metadata.description = pkg.description;
+      this.metadata.author      = pkg.author;
+      this.metadata.license     = pkg.license;
+      this.metadata.uri         = pkg.homepage;
     } catch { /* ignore — metadata is optional */ }
   }
 

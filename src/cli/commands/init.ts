@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import inquirer from 'inquirer';
 import { ApmConfigManager, CONFIG_FILENAME } from '../../core/config';
 import { ApmLockManager, LOCK_FILENAME } from '../../core/lock';
@@ -6,38 +7,40 @@ import { ApmManifestManager } from '../../core/manifest';
 import * as log from '../../utils/log';
 
 interface InitOptions {
-  yes:   boolean;
-  force: boolean;
+  yes:        boolean;
+  force:      boolean;
+  configPath?: string;
 }
 
 /**
- * Initialize a project for APM: create apm.config.json and apm.lock.json.
+ * Initialize a project for APM: create apm.pack.json and apm.lock.json.
  *
  * Interactive by default. Pass yes=true to accept all defaults without prompts.
- * Pass force=true to overwrite an existing apm.config.json.
+ * Pass force=true to overwrite an existing apm.pack.json.
+ * Pass configPath to write the config to a non-default location.
  */
 export async function initCommand(projectRoot: string, opts: InitOptions): Promise<void> {
   log.section('APM — Initialize project');
 
-  const configManager = new ApmConfigManager(projectRoot);
+  const configManager = new ApmConfigManager(projectRoot, opts.configPath);
   const lockManager   = new ApmLockManager(projectRoot);
 
   const configExists = configManager.read() !== null;
   const lockExists   = lockManager.read()   !== null;
 
-  // ── apm.config.json ───────────────────────────────────────────────────────
+  // ── apm.pack.json ─────────────────────────────────────────────────────────
 
   if (configExists && !opts.force) {
     log.skip(`${CONFIG_FILENAME} already exists  (use --force to overwrite)`);
   } else {
     const provider = opts.yes
-      ? 'claude'
+      ? 'standard'
       : (await inquirer.prompt<{ provider: string }>([{
           type:    'list',
           name:    'provider',
           message: 'Default provider:',
-          choices: ['claude', 'standard', 'vscode'],
-          default: 'claude',
+          choices: ['standard', 'claude', 'cursor', 'vscode', 'windsurf'],
+          default: 'standard',
         }])).provider;
 
     const scope = opts.yes
@@ -55,7 +58,7 @@ export async function initCommand(projectRoot: string, opts: InitOptions): Promi
       : (await inquirer.prompt<{ enable: boolean }>([{
           type:    'confirm',
           name:    'enable',
-          message: 'Enable community skill sources? (can be done later by editing apm.config.json)',
+          message: `Enable community skill sources? (can be done later by editing ${CONFIG_FILENAME})`,
           default: false,
         }])).enable;
 
@@ -70,7 +73,7 @@ export async function initCommand(projectRoot: string, opts: InitOptions): Promi
     }
 
     configManager.write(config);
-    log.ok(`${CONFIG_FILENAME} written`);
+    log.ok(`${CONFIG_FILENAME} written  (${configManager.getConfigPath()})`);
 
     if (enableCommunity) {
       log.detail('Community sources enabled. Run `apm refresh` to clone them.');
@@ -86,10 +89,9 @@ export async function initCommand(projectRoot: string, opts: InitOptions): Promi
     log.ok(`${LOCK_FILENAME} written  (empty — run \`apm status\` to populate)`);
   }
 
-  // ── apm.json manifest ────────────────────────────────────────────────────
+  // ── .agents/apm.json manifest ─────────────────────────────────────────────
 
-  const agentsDir = fs.existsSync(require('path').join(projectRoot, '.agents'));
-  if (agentsDir) {
+  if (fs.existsSync(path.join(projectRoot, '.agents'))) {
     const manager  = new ApmManifestManager(projectRoot);
     const manifest = manager.generate();
     manager.write(manifest);

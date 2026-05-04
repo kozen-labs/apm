@@ -39,7 +39,7 @@ The `--scope=global` flag installs into the user's home directory instead of the
 
 ### Sources
 
-APM fetches packages from three source types, all configured in `apm.config.json`:
+APM fetches packages from three source types, all configured in `apm.pack.json`:
 
 | Source | Description |
 |---|---|
@@ -65,7 +65,7 @@ npm install @kozen/apm
 
 ### Initialize a project
 
-Creates `apm.config.json` (source configuration) and `apm.lock.json` (install state):
+Creates `apm.pack.json` (source configuration) and `apm.lock.json` (install state):
 
 ```bash
 npx kozen --moduleLoad=@kozen/apm --action=apm:setup
@@ -116,7 +116,7 @@ npx kozen --moduleLoad=@kozen/apm --action=apm:uninstall --provider=claude --sco
 
 ### Refresh remote sources
 
-After adding a `github` or `npm` source to `apm.config.json`, pull the latest content:
+After adding a `github` or `npm` source to `apm.pack.json`, pull the latest content:
 
 ```bash
 npx kozen --moduleLoad=@kozen/apm --action=apm:refresh
@@ -129,7 +129,7 @@ npx kozen --moduleLoad=@kozen/apm --action=apm:refresh
 | Action | Description | Key options |
 |---|---|---|
 | `apm:help` | Show usage and list of actions | — |
-| `apm:setup` | Initialize `apm.config.json` and `apm.lock.json` | `--yes`, `--force` |
+| `apm:setup` | Initialize `apm.pack.json` and `apm.lock.json` | `--yes`, `--force` |
 | `apm:install` | Install packages into a provider | `--packages`, `--component`, `--provider`, `--scope`, `--dir` |
 | `apm:uninstall` | Remove installed packages | `--packages`, `--component`, `--provider`, `--scope`, `--dir` |
 | `apm:list` | List all available packages from configured sources | `--component` |
@@ -146,7 +146,10 @@ npx kozen --moduleLoad=@kozen/apm --action=apm:refresh
 | `--provider` | `standard` | Target AI tool: `standard`, `claude`, `cursor`, `vscode`, `windsurf` |
 | `--scope` | `local` | Install scope: `local` (current project) or `global` (home directory) |
 | `--packages` | _(all)_ | Comma-separated package names. Omit to operate on all packages. |
-| `--projectRoot` | _(auto-detected)_ | Absolute path to the project root |
+| `--config` | _(auto-detected)_ | Path to `apm.pack.json`. Project root is derived as its parent directory. Overrides `APM_CONFIG` env var. |
+| `--projectRoot` | _(auto-detected)_ | Absolute path to the project root. Ignored when `--config` is set. |
+
+The `APM_CONFIG` environment variable is the persistent equivalent of `--config`: set it in `.env` or CI to point to a shared or non-standard config location. `--config` on the command line always takes precedence over `APM_CONFIG`.
 
 ---
 
@@ -180,7 +183,7 @@ The following MCP tools are registered:
 
 ---
 
-## 🗂️ Configuration: `apm.config.json`
+## 🗂️ Configuration: `apm.pack.json`
 
 `apm:setup` generates this file with all community sources pre-configured. Enable the sources you want by setting `"enabled": true` and running `apm:refresh`.
 
@@ -249,7 +252,7 @@ The two values are coupled: the correct pairing depends on where you want skills
 | `local` | `claude` | `.claude/skills/` inside the auto-detected project root |
 | `local` | `cursor` | `.cursor/rules/` inside the auto-detected project root |
 
-When `scope` is `local`, APM resolves the project root automatically from the directory where the command is run, walking up the file tree until it finds a `package.json`, `apm.config.json`, or `.git` directory. You can override this with `--projectRoot=<path>`.
+When `scope` is `local`, APM resolves the project root by walking up the file tree from the working directory until it finds a `.agents/` directory or an `apm.pack.json` file. Pass `--config=<path>` (or set `APM_CONFIG`) to use a config file in a non-standard location; the project root is then the directory containing that file.
 ```
 
 ---

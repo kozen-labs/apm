@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ApmConfig, ApmSource } from '../models/config.model';
 
-export const CONFIG_FILENAME = 'apm.config.json';
+export const CONFIG_FILENAME = 'apm.pack.json';
 
 /**
  * Default configuration created on first run.
@@ -94,20 +94,29 @@ const DEFAULT_CONFIG: ApmConfig = {
 };
 
 /**
- * Reads, writes, and creates apm.config.json at the project root.
+ * Reads, writes, and creates apm.pack.json at the project root.
  *
  * The config tells APM where to find packages (sources) and provides
- * install defaults. When absent, a default local-source config is
- * created on first call to getOrCreate().
+ * install defaults.
  *
- * Future: sources with type 'github' or 'npm' will be resolved by
- * a remote fetcher (not yet implemented).
+ * Config file resolution priority:
+ *   1. Explicit `configPath` constructor argument
+ *   2. APM_CONFIG environment variable (absolute or relative to projectRoot)
+ *   3. <projectRoot>/apm.pack.json (default)
  */
 export class ApmConfigManager {
   private configPath: string;
 
-  constructor(private readonly projectRoot: string) {
-    this.configPath = path.join(projectRoot, CONFIG_FILENAME);
+  constructor(private readonly projectRoot: string, configPath?: string) {
+    const override = configPath ?? process.env.APM_CONFIG;
+    this.configPath = override
+      ? path.resolve(projectRoot, override)
+      : path.join(projectRoot, CONFIG_FILENAME);
+  }
+
+  /** Absolute path to the config file used by this manager instance. */
+  getConfigPath(): string {
+    return this.configPath;
   }
 
   /** Parse and return the config, or null when the file does not exist. */

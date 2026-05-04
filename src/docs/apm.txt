@@ -1,0 +1,149 @@
+APM - Agent Package Manager
+===========================
+
+Install, update, and manage AI context files (skills, agents, hooks, and context
+documents) across multiple AI coding tools from a single command.
+
+USAGE
+-----
+
+  npx kozen --moduleLoad=@kozen/apm --action=apm:<action> [options]
+  npx kozen --moduleLoad=@kozen/apm --type=mcp
+
+ACTIONS
+-------
+
+  apm:help        Show this help text and list all available actions.
+
+  apm:setup       Initialize apm.pack.json and apm.lock.json in the current
+                  project. Creates default source configuration on first run.
+                  Options: --yes, --force
+
+  apm:install     Install packages from configured sources into a provider.
+                  Options: --packages, --component, --provider, --scope, --dir
+
+  apm:uninstall   Remove installed packages from a provider.
+                  Options: --packages, --component, --provider, --scope, --dir
+
+  apm:list        List all available packages from configured and enabled sources.
+                  Options: --component
+
+  apm:status      Show all installed packages across providers and scopes.
+                  Options: --component
+
+  apm:outdated    Show packages that have newer versions available.
+                  Options: --component
+
+  apm:manifest    Scan source directories and write the .agents/apm.json manifest.
+
+  apm:refresh     Pull the latest content from remote sources (github, npm).
+                  Options: --source
+
+OPTIONS
+-------
+
+  --component     Component type to operate on.
+                  Values: skill | agent | hook | context | all
+                  Default: skill
+
+  --provider      Target AI tool provider.
+                  Values: standard | claude | cursor | vscode | windsurf
+                  Default: standard
+
+  --scope         Installation scope.
+                  Values: local | global
+                  Default: global
+
+  --packages      Comma-separated package names. Omit to operate on all packages.
+
+  --projectRoot   Absolute path to the project root. Auto-detected when omitted
+                  by walking up the directory tree to the nearest package.json,
+                  apm.pack.json, or .git directory.
+
+  --source        Source name filter for apm:refresh. Refreshes all enabled
+                  remote sources when omitted.
+
+  --config        Path to apm.pack.json. Overrides APM_CONFIG env var.
+                  The project root is derived as the directory containing this file.
+
+  --yes           Skip interactive prompts and accept defaults (apm:setup).
+
+  --force         Overwrite existing configuration (apm:setup).
+
+ENVIRONMENT VARIABLES
+---------------------
+
+  APM_CONFIG        Path to apm.pack.json. Useful in CI or monorepos where the
+                    config lives outside the working directory. The project root
+                    is derived as the directory containing the file.
+                    --config=<path> on the command line takes precedence.
+
+  KOZEN_LOG_LEVEL   Log verbosity: DEBUG | INFO | WARN | ERROR | NONE
+                    Set to NONE when running as an MCP server to prevent
+                    console output from corrupting the JSON-RPC stream.
+
+  KOZEN_MODULE_LOAD Path or package name of the module to load.
+                    Equivalent to --moduleLoad on the command line.
+
+EXAMPLES
+--------
+
+  # Initialize a project
+  npx kozen --moduleLoad=@kozen/apm --action=apm:setup
+
+  # List available skills from all enabled sources
+  npx kozen --moduleLoad=@kozen/apm --action=apm:list --component=skill
+
+  # Install all skills into Claude Code (project scope)
+  npx kozen --moduleLoad=@kozen/apm --action=apm:install \
+    --component=skill --provider=claude --scope=local
+
+  # Install specific packages by name
+  npx kozen --moduleLoad=@kozen/apm --action=apm:install \
+    --packages=ks-mongodb-core,ks-security-patterns-and-principles \
+    --provider=claude --scope=global
+
+  # Check for outdated packages
+  npx kozen --moduleLoad=@kozen/apm --action=apm:outdated
+
+  # Remove all Claude Code skills from the current project
+  npx kozen --moduleLoad=@kozen/apm --action=apm:uninstall \
+    --provider=claude --scope=local
+
+  # Pull latest content from all enabled remote sources
+  npx kozen --moduleLoad=@kozen/apm --action=apm:refresh
+
+MCP SERVER
+----------
+
+  Configure in your AI tool's MCP settings:
+
+  {
+    "mcpServers": {
+      "kozen-apm": {
+        "command": "npx",
+        "args": ["kozen", "--moduleLoad=@kozen/apm", "--type=mcp"],
+        "env": { "KOZEN_LOG_LEVEL": "NONE" }
+      }
+    }
+  }
+
+  MCP tools exposed: kozen_apm_install, kozen_apm_uninstall, kozen_apm_list,
+                     kozen_apm_status, kozen_apm_outdated
+
+CONFIGURATION
+-------------
+
+  apm.pack.json   Source configuration. Created by apm:setup. Defines where
+                    packages are fetched from (local, github, npm, skills-sh,
+                    awesome-claude) and sets default provider and scope.
+
+  apm.lock.json     Install state. Commit to version control for reproducible
+                    team installs. Managed automatically by install/uninstall.
+
+MORE INFORMATION
+----------------
+
+  https://github.com/mongodb/agent-skills
+  https://www.npmjs.com/package/@kozen/apm
+  https://www.npmjs.com/package/@kozen/engine

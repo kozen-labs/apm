@@ -18,10 +18,25 @@ import * as log from '../utils/log';
 
 bootstrap();
 
-// ── project root ──────────────────────────────────────────────────────────────
+// ── config file resolution ────────────────────────────────────────────────────
+// Extract --config=<path> from argv before Commander parses the rest so that
+// PROJECT_ROOT can be derived from it at startup. Priority:
+//   --config=<path> CLI arg  >  APM_CONFIG env var  >  auto-detected root
 
-const PROJECT_ROOT = findProjectRoot();
-const LOG_DIR      = path.join(PROJECT_ROOT, 'tmp', 'apm');
+function extractConfigArg(): string | undefined {
+  for (const arg of process.argv.slice(2)) {
+    if (arg.startsWith('--config=')) return arg.slice('--config='.length);
+  }
+  return undefined;
+}
+
+const CONFIG_OVERRIDE = extractConfigArg() ?? process.env.APM_CONFIG;
+
+const PROJECT_ROOT = CONFIG_OVERRIDE
+  ? path.dirname(path.resolve(CONFIG_OVERRIDE))
+  : findProjectRoot();
+
+const LOG_DIR = path.join(PROJECT_ROOT, 'tmp', 'apm');
 
 // ── reusable option factories ─────────────────────────────────────────────────
 
@@ -32,7 +47,7 @@ const mkTypeOpt = () =>
 
 const mkProviderOpt = () =>
   new Option('--provider <name>', 'Target provider')
-    .choices(['standard', 'claude', 'vscode'])
+    .choices(['standard', 'claude', 'cursor', 'vscode', 'windsurf'])
     .default('standard');
 
 const mkScopeOpt = () =>
@@ -42,6 +57,9 @@ const mkScopeOpt = () =>
 
 const mkDirOpt = () =>
   new Option('--dir <path>', 'Custom install directory (overrides scope path)');
+
+const mkConfigOpt = () =>
+  new Option('--config <path>', 'Path to apm.pack.json (overrides APM_CONFIG env var)');
 
 // ── session log helpers ───────────────────────────────────────────────────────
 
@@ -62,17 +80,22 @@ const program = new Command();
 
 program
   .name('apm')
-  .description('APM — Agent Package Manager  |  manage AI skills, agents, and hooks')
+  .description('APM - Agent Package Manager  |  manage AI skills, agents, and hooks')
   .version('1.0.0', '-v, --version');
 
 // init
 program
   .command('init')
-  .description('Initialize a project for APM — create apm.config.json and apm.lock.json')
+  .description('Initialize a project for APM — create apm.pack.json and apm.lock.json')
   .option('-y, --yes',   'Accept all defaults without prompts', false)
-  .option('-f, --force', 'Overwrite existing apm.config.json', false)
-  .action(opts => initCommand(PROJECT_ROOT, { yes: opts.yes, force: opts.force })
-    .catch(err => { console.error(err); process.exit(1); }));
+  .option('-f, --force', 'Overwrite existing apm.pack.json', false)
+  .addOption(mkConfigOpt())
+  .action(opts => {
+    const configPath = (opts.config as string | undefined) ?? CONFIG_OVERRIDE;
+    const root = configPath ? path.dirname(path.resolve(configPath)) : PROJECT_ROOT;
+    initCommand(root, { yes: opts.yes, force: opts.force, configPath })
+      .catch(err => { console.error(err); process.exit(1); });
+  });
 
 // install
 program
@@ -182,7 +205,7 @@ async function interactiveMenu(): Promise<void> {
 
   const { provider } = await inquirer.prompt<{ provider: string }>([{
     type: 'list', name: 'provider', message: 'Provider:',
-    choices: ['standard', 'claude', 'vscode'], default: 'standard',
+    choices: ['standard', 'claude', 'cursor', 'vscode', 'windsurf'], default: 'standard',
   }]);
 
   const { scope } = await inquirer.prompt<{ scope: string }>([{

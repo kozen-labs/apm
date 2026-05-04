@@ -1,3 +1,4 @@
+import path from 'path';
 import { KzController, VCategory } from '@kozen/engine';
 import { PackageType, Provider, Scope } from '../models/provider.model';
 import { findProjectRoot } from '../platform/system';
@@ -30,10 +31,11 @@ export class ApmCLIController extends KzController {
 
   /**
    * Resolve the project root.
-   * Priority: --projectRoot CLI arg > IoC-registered apm:project-root > auto-detect.
-   * The IoC value covers the common case; --projectRoot handles CI / monorepo overrides.
+   * Priority: --config path dirname > --projectRoot > IoC apm:project-root > auto-detect.
+   * --config=<path> lets callers point to any apm.pack.json; projectRoot is its directory.
    */
   private async getProjectRoot(): Promise<string> {
+    if (this.args?.config) return path.dirname(path.resolve(this.args.config as string));
     if (this.args?.projectRoot) return this.args.projectRoot as string;
     try {
       return await this.assistant?.resolve<string>('apm:project-root') ?? findProjectRoot();
@@ -52,12 +54,6 @@ export class ApmCLIController extends KzController {
     return raw === 'all'
       ? [PackageType.SKILL, PackageType.AGENT]
       : [raw as PackageType];
-  }
-
-  private getSingleComponentType(): PackageType {
-    return ((this.args?.component ?? 'skill') as string) === 'all'
-      ? PackageType.SKILL
-      : (this.args?.component ?? 'skill') as PackageType;
   }
 
   /**
@@ -95,7 +91,7 @@ Actions:
   list        List available packages from sources
   status      Show all installed packages (highlights outdated)
   outdated    Show packages with newer versions available
-  setup       Initialize project (create apm.config.json + apm.lock.json)
+  setup       Initialize project (create apm.pack.json + apm.lock.json)
   manifest    Scan source directories and write .agents/apm.json
   refresh     Pull latest from remote sources (github, npm)
 
@@ -111,7 +107,8 @@ Install / Uninstall Options:
 
 Init Options:
   --yes                                        Accept all defaults
-  --force                                      Overwrite existing apm.config.json
+  --config=<path>                              Path to apm.pack.json (overrides APM_CONFIG env var)
+  --force                                      Overwrite existing apm.pack.json
 
 Refresh Options:
   --source=<name>                              Specific source name to refresh
@@ -182,12 +179,14 @@ MCP Server (expose APM as AI tools):
     outdatedCommand(projectRoot, type);
   }
 
-  /** npx kozen --action=apm:setup [--yes] [--force] */
+  /** npx kozen --action=apm:setup [--yes] [--force] [--config=<path>] */
   public async setup(): Promise<void> {
+    const configPath  = this.args?.config as string | undefined;
     const projectRoot = await this.getProjectRoot();
     await initCommand(projectRoot, {
-      yes:   Boolean(this.args?.yes),
-      force: Boolean(this.args?.force),
+      yes:        Boolean(this.args?.yes),
+      force:      Boolean(this.args?.force),
+      configPath,
     });
   }
 

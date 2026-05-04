@@ -10,7 +10,7 @@ tmp/*
 __pycache__
 
 # APM runtime files — machine-local, regenerated on demand
-apm.config.json
+apm.pack.json
 apm.lock.json
 apm.cache/
 
