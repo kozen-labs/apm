@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ApmConfig, ApmSource } from '../models/config.model';
 
-export const CONFIG_FILENAME = 'apm.pack.json';
+const CONFIG_FILENAME = 'apm.pack.json';
 
 const DEFAULT_CONFIG: ApmConfig = {
   schemaVersion: '1.0',

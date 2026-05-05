@@ -60,8 +60,6 @@ export default ApmModule;
 
 // ── Public library API ─────────────────────────────────────────────────────
 
-export { ApmRegistry }        from './plugins/components/registry';
-export { ApmInstaller }       from './plugins/components/installer';
 export { ApmManifestManager } from './utils/manifest';
 export { ApmConfigManager }   from './utils/config';
 export { ApmLockManager }     from './utils/lock';

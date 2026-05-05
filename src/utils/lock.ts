@@ -3,7 +3,7 @@ import path from 'path';
 import { ApmLock, ApmLockEntry } from '../models/config.model';
 import { InstalledPackage } from '../models/package.model';
 
-export const LOCK_FILENAME = 'apm.lock.json';
+const LOCK_FILENAME = 'apm.lock.json';
 
 export class ApmLockManager {
   private lockPath: string;

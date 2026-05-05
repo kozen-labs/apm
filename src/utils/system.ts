@@ -1,7 +1,7 @@
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import { CONFIG_FILENAME } from './config';
+const CONFIG_FILENAME = 'apm.pack.json';
 
 export type OsType = 'windows' | 'macos' | 'linux';
 
