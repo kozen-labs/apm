@@ -2,15 +2,16 @@ import fs from 'fs';
 import path from 'path';
 import { ApmManifest, ApmPackage } from '../models/package.model';
 import { PackageType, inferGroup } from '../models/provider.model';
-import { parseFrontmatter } from './frontmatter';
+import { parseFrontmatter } from '../utils/frontmatter';
 
-const MANIFEST_RELATIVE = path.join('.agents', 'apm.json');
+const MANIFEST_FILE = process.env.KOZEN_APM_MANIFEST_FILE ?? path.join('.agents', 'apm.json');
 
+/** Reads, writes, and generates the .agents/apm.json source manifest. */
 export class ApmManifestManager {
   private manifestPath: string;
 
   constructor(private projectRoot: string) {
-    this.manifestPath = path.join(projectRoot, MANIFEST_RELATIVE);
+    this.manifestPath = path.join(projectRoot, MANIFEST_FILE);
   }
 
   read(): ApmManifest | null {

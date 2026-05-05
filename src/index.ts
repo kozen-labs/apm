@@ -60,16 +60,16 @@ export default ApmModule;
 
 // ── Public library API ─────────────────────────────────────────────────────
 
-export { ApmManifestManager } from './utils/manifest';
-export { ApmConfigManager }   from './utils/config';
-export { ApmLockManager }     from './utils/lock';
+export { ApmManifestManager } from './services/manifest';
+export { ApmConfigManager }   from './services/config';
+export { ApmLockManager }     from './services/lock';
 export { bootstrap }          from './plugins/bootstrap';
 export * as PluginRegistry    from './plugins/PluginRegistry';
 
 // ── Plugin interfaces ──────────────────────────────────────────────────────
-export { type IRepository }     from './plugins/repositories/IRepository';
-export { type IProvider }       from './plugins/providers/IProvider';
-export { type IComponentPlugin } from './plugins/components/IComponentPlugin';
+export { type IRepository } from './plugins/repositories/IRepository';
+export { type IProvider }   from './plugins/providers/IProvider';
+export { type IComponent }  from './plugins/components/IComponent';
 
 // ── Repositories ───────────────────────────────────────────────────────────
 export { LocalRepository }         from './plugins/repositories/LocalRepository';
@@ -90,14 +90,14 @@ export {
   allAgentLocations,
   skillSourceBases,
   agentSourceBases,
-} from './plugins/providers/path.resolver';
+} from './utils/path.resolver';
 
-// ── Component plugins ──────────────────────────────────────────────────────
-export { BaseComponentPlugin } from './plugins/components/BaseComponentPlugin';
-export { SkillPlugin }         from './plugins/components/SkillPlugin';
-export { AgentPlugin }         from './plugins/components/AgentPlugin';
-export { HookPlugin }          from './plugins/components/HookPlugin';
-export { ContextPlugin }       from './plugins/components/ContextPlugin';
+// ── Components ─────────────────────────────────────────────────────────────
+export { BaseComponent } from './plugins/components/BaseComponent';
+export { Skill }         from './plugins/components/Skill';
+export { Agent }         from './plugins/components/Agent';
+export { Hook }          from './plugins/components/Hook';
+export { Context }       from './plugins/components/Context';
 
 // ── Utilities and models ───────────────────────────────────────────────────
 export { parseFrontmatter, stripFrontmatter } from './utils/frontmatter';
@@ -105,3 +105,4 @@ export { findProjectRoot, getOs }             from './utils/system';
 export * from './models/package.model';
 export * from './models/provider.model';
 export * from './models/config.model';
+export * from './models/component.model';

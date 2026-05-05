@@ -73,17 +73,37 @@ OPTIONS
 ENVIRONMENT VARIABLES
 ---------------------
 
-  KOZEN_APM_CONFIG        Path to apm.pack.json. Useful in CI or monorepos where the
-                    config lives outside the working directory. The project root
-                    is derived as the directory containing the file.
-                    --config=<path> on the command line takes precedence.
+  KOZEN_APM_CONFIG      Path to apm.pack.json. Useful in CI or monorepos where the
+                        config lives outside the working directory. The project root
+                        is derived as the directory containing the file.
+                        --config=<path> on the command line takes precedence.
 
-  KOZEN_LOG_LEVEL   Log verbosity: DEBUG | INFO | WARN | ERROR | NONE
-                    Set to NONE when running as an MCP server to prevent
-                    console output from corrupting the JSON-RPC stream.
+  KOZEN_APM_CONFIG_FILE Filename for the project configuration file.
+                        Default: apm.pack.json. Override when your project uses a
+                        different name for the APM configuration file.
 
-  KOZEN_MODULE_LOAD Path or package name of the module to load.
-                    Equivalent to --moduleLoad on the command line.
+  KOZEN_APM_LOCK_FILE   Filename for the install-state lock file.
+                        Default: apm.lock.json.
+
+  KOZEN_APM_MANIFEST_FILE
+                        Relative path for the source manifest file.
+                        Default: .agents/apm.json.
+
+  KOZEN_APM_COMPONENT   Default component type. Values: skill | agent | all.
+                        Maps to --component. Default: skill.
+
+  KOZEN_APM_PROVIDER    Default AI tool provider. Values: standard | claude | cursor |
+                        vscode | windsurf. Maps to --provider. Default: standard.
+
+  KOZEN_APM_SCOPE       Default installation scope. Values: local | global.
+                        Maps to --scope. Default: local.
+
+  KOZEN_LOG_LEVEL       Log verbosity: DEBUG | INFO | WARN | ERROR | NONE
+                        Set to NONE when running as an MCP server to prevent
+                        console output from corrupting the JSON-RPC stream.
+
+  KOZEN_MODULE_LOAD     Path or package name of the module to load.
+                        Equivalent to --moduleLoad on the command line.
 
 EXAMPLES
 --------

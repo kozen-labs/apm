@@ -1,10 +1,10 @@
 import fs from 'fs';
 import { ApmPackage, InstalledMeta } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
-import { BaseComponentPlugin } from './BaseComponentPlugin';
+import { BaseComponent } from './BaseComponent';
 
 /**
- * HookPlugin — component plugin for hook scripts.
+ * Hook — component for hook scripts.
  *
  * Hooks are shell scripts triggered by AI tool events (e.g. pre-commit,
  * post-tool-use). Install/uninstall lifecycle is not yet implemented in v1.
@@ -13,7 +13,7 @@ import { BaseComponentPlugin } from './BaseComponentPlugin';
  *
  * Full implementation is planned for Phase 10.
  */
-export class HookPlugin extends BaseComponentPlugin {
+export class Hook extends BaseComponent {
   readonly type          = PackageType.HOOK;
   readonly installSubdir = 'hooks';
 

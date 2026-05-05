@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ApmConfig, ApmSource } from '../models/config.model';
 
-const CONFIG_FILENAME = 'apm.pack.json';
+const CONFIG_FILENAME = process.env.KOZEN_APM_CONFIG_FILE ?? 'apm.pack.json';
 
 const DEFAULT_CONFIG: ApmConfig = {
   schemaVersion: '1.0',
@@ -83,6 +83,7 @@ const DEFAULT_CONFIG: ApmConfig = {
   defaultScope:    'global',
 };
 
+/** Reads and writes the project-level apm.pack.json configuration file. */
 export class ApmConfigManager {
   private configPath: string;
 

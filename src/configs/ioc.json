@@ -1,27 +1,27 @@
 {
   "apm:plugin:component:skill": {
-    "target":       "SkillPlugin",
+    "target":       "Skill",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/components",
     "dependencies": []
   },
   "apm:plugin:component:agent": {
-    "target":       "AgentPlugin",
+    "target":       "Agent",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/components",
     "dependencies": []
   },
   "apm:plugin:component:hook": {
-    "target":       "HookPlugin",
+    "target":       "Hook",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/components",
     "dependencies": []
   },
   "apm:plugin:component:context": {
-    "target":       "ContextPlugin",
+    "target":       "Context",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/components",

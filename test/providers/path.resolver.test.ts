@@ -6,7 +6,7 @@ import {
   allAgentLocations,
   skillSourceBases,
   agentSourceBases,
-} from '../../src/plugins/providers/path.resolver';
+} from '../../src/utils/path.resolver';
 import { Provider, Scope } from '../../src/models/provider.model';
 
 const PROJECT_ROOT = '/project';

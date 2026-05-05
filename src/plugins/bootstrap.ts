@@ -14,11 +14,11 @@ import { CursorProvider }   from './providers/CursorProvider';
 import { VscodeProvider }   from './providers/VscodeProvider';
 import { WindsurfProvider } from './providers/WindsurfProvider';
 
-// ── Component plugins ─────────────────────────────────────────────────────────
-import { SkillPlugin }   from './components/SkillPlugin';
-import { AgentPlugin }   from './components/AgentPlugin';
-import { HookPlugin }    from './components/HookPlugin';
-import { ContextPlugin } from './components/ContextPlugin';
+// ── Components ────────────────────────────────────────────────────────────────
+import { Skill }   from './components/Skill';
+import { Agent }   from './components/Agent';
+import { Hook }    from './components/Hook';
+import { Context } from './components/Context';
 
 let bootstrapped = false;
 
@@ -38,8 +38,8 @@ export function bootstrap(): void {
   registerProvider(new VscodeProvider());
   registerProvider(new WindsurfProvider());
 
-  registerComponent(new SkillPlugin());
-  registerComponent(new AgentPlugin());
-  registerComponent(new HookPlugin());
-  registerComponent(new ContextPlugin());
+  registerComponent(new Skill());
+  registerComponent(new Agent());
+  registerComponent(new Hook());
+  registerComponent(new Context());
 }

@@ -1,16 +1,16 @@
 import path from 'path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { KzController, VCategory } from '@kozen/engine';
+import { KzController, IArgs, VCategory } from '@kozen/engine';
 import { PackageType, Provider, Scope } from '../models/provider.model';
 import { InstalledPackage } from '../models/package.model';
 import { findProjectRoot } from '../utils/system';
+import { resolveInstallPath } from '../utils/path.resolver';
 import * as log from '../utils/log';
-import { resolveInstallPath } from '../plugins/providers/path.resolver';
-import type { IComponentPlugin } from '../plugins/components/IComponentPlugin';
+import type { IComponent } from '../plugins/components/IComponent';
 
 /**
- * ApmCLIController — thin dispatcher. Resolves the component plugin for the
+ * ApmCLIController — thin dispatcher that resolves the IComponent plugin for the
  * requested --component type and delegates every action to it.
  *
  * Dispatch: npx kozen --moduleLoad=@kozen/apm --action=apm:<method>
@@ -22,6 +22,19 @@ import type { IComponentPlugin } from '../plugins/components/IComponentPlugin';
  * Renamed flag: --component (was --type; avoids collision with Kozen's --type=cli|mcp)
  */
 export class ApmCLIController extends KzController {
+
+  /**
+   * Apply KOZEN_APM_* env-var fallbacks and argument defaults before dispatch.
+   * Priority: CLI flag → env var → hardcoded default.
+   */
+  public async fill(args: string[] | IArgs): Promise<IArgs> {
+    const parsed = await super.fill(args);
+    parsed['component'] = parsed['component'] || process.env.KOZEN_APM_COMPONENT || 'skill';
+    parsed['provider']  = parsed['provider']  || process.env.KOZEN_APM_PROVIDER  || 'standard';
+    parsed['scope']     = parsed['scope']      || process.env.KOZEN_APM_SCOPE     || 'local';
+    parsed['config']    = parsed['config']     || process.env.KOZEN_APM_CONFIG;
+    return parsed;
+  }
 
   // ── arg helpers ────────────────────────────────────────────────────────────
 
@@ -36,11 +49,11 @@ export class ApmCLIController extends KzController {
   }
 
   private getComponentType(): PackageType {
-    return ((this.args?.component ?? 'skill') as string) as PackageType;
+    return (this.args?.component as string) as PackageType;
   }
 
   private getComponentTypes(): PackageType[] {
-    const raw = (this.args?.component ?? 'skill') as string;
+    const raw = this.args?.component as string;
     return raw === 'all'
       ? [PackageType.SKILL, PackageType.AGENT]
       : [raw as PackageType];
@@ -51,56 +64,23 @@ export class ApmCLIController extends KzController {
       .split(',').map(s => s.trim()).filter(Boolean);
   }
 
-  private getProvider(): Provider { return (this.args?.provider ?? 'standard') as Provider; }
-  private getScope():    Scope    { return (this.args?.scope    ?? 'local')    as Scope;    }
+  private getProvider(): Provider { return this.args?.provider as Provider; }
+  private getScope():    Scope    { return this.args?.scope    as Scope;    }
 
   // ── plugin resolution ──────────────────────────────────────────────────────
 
-  private async plugin(type: PackageType): Promise<IComponentPlugin> {
-    return this.assistant!.resolve<IComponentPlugin>(`apm:plugin:component:${type}`);
+  private async plugin(type: PackageType): Promise<IComponent> {
+    return this.assistant!.resolve<IComponent>(`apm:plugin:component:${type}`);
   }
 
   // ── actions ────────────────────────────────────────────────────────────────
 
+  /**
+   * Displays help from src/docs/apm.txt via the FileService.
+   */
   public async help(): Promise<void> {
-    console.log(`
-@kozen/apm — Agent Package Manager
-
-Usage:
-  npx kozen --moduleLoad=@kozen/apm --action=apm:<action> [options]
-
-Actions:
-  help        Show this help message
-  install     Install packages from the source registry
-  uninstall   Remove installed packages
-  list        List available packages from sources
-  status      Show all installed packages (highlights outdated)
-  outdated    Show packages with newer versions available
-  setup       Initialize project (create apm.pack.json + apm.lock.json)
-  manifest    Scan source directories and write .agents/apm.json
-  refresh     Pull latest from remote sources (github, npm)
-
-Common Options:
-  --component=<skill|agent|all>                          Component type  [default: skill]
-  --provider=<standard|claude|cursor|vscode|windsurf>    Target provider [default: standard]
-  --scope=<local|global>                                 Scope           [default: local]
-  --projectRoot=<path>                                   Project root (auto-detected if omitted)
-
-Install / Uninstall Options:
-  --packages=<name1,name2,...>   Package names (comma-separated; omit to install/remove all)
-  --dir=<path>                   Custom install directory
-
-Setup Options:
-  --yes                          Accept all defaults without prompts
-  --config=<path>                Path to apm.pack.json (overrides KOZEN_APM_CONFIG env var)
-  --force                        Overwrite existing apm.pack.json / apm.lock.json
-
-Refresh Options:
-  --source=<name>                Specific source name to refresh
-
-MCP Server:
-  npx kozen --moduleLoad=@kozen/apm --type=mcp
-    `);
+    const content = await this.srvFile?.select('apm');
+    console.log(content ?? '@kozen/apm — run with --action=apm:help for usage.');
   }
 
   public async install(): Promise<void> {
@@ -183,10 +163,7 @@ MCP Server:
       log.section(`Installed ${type}s  (${installed.length} total)`);
       for (const [key, members] of Object.entries(groupBy(installed, p => `${p.provider}/${p.scope}`)).sort()) {
         const [provider, scope] = key.split('/') as [Provider, Scope];
-        const installPath = resolveInstallPath(
-          provider, scope, projectRoot,
-          type === PackageType.AGENT ? 'agent' : 'skill',
-        );
+        const installPath = resolveInstallPath(provider, scope, projectRoot, type === PackageType.AGENT ? 'agent' : 'skill');
         console.log(`\n  ${chalk.bold(provider.toUpperCase())} / ${scope}  →  ${chalk.dim(installPath)}`);
         for (const pkg of members.sort((a, b) => a.name.localeCompare(b.name))) {
           const upd      = pkg.updated ? `  ${chalk.dim(`updated ${pkg.updated}`)}` : '';
@@ -232,12 +209,15 @@ MCP Server:
     if (allInstalled.length) log.detail('Lock written: apm.lock.json');
   }
 
-  /** Interactive prompts are controller responsibility; resolved values delegate to plugin. */
+  /**
+   * Interactive prompts own provider/scope/community-sources selection;
+   * resolved values are delegated to the plugin.
+   */
   public async setup(): Promise<void> {
     const projectRoot = await this.getProjectRoot();
     const configPath  = this.args?.config as string | undefined;
     const force       = Boolean(this.args?.force);
-    const p           = await this.plugin(PackageType.SKILL); // project-level op, any plugin works
+    const p           = await this.plugin(PackageType.SKILL);
 
     const provider = this.args?.yes
       ? 'standard'
@@ -279,6 +259,7 @@ MCP Server:
     const p           = await this.plugin(this.getComponentType());
     p.refresh({ projectRoot, sourceName: this.args?.source as string | undefined });
   }
+
 }
 
 function groupBy<T>(items: T[], keyFn: (i: T) => string): Record<string, T[]> {

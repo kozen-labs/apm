@@ -1,10 +1,10 @@
 import fs from 'fs';
 import { ApmPackage, InstalledMeta } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
-import { BaseComponentPlugin } from './BaseComponentPlugin';
+import { BaseComponent } from './BaseComponent';
 
 /**
- * ContextPlugin — component plugin for context definition files.
+ * Context — component for context definition files.
  *
  * Contexts are structured markdown files that inject domain knowledge into
  * an AI session (e.g. project glossary, architecture overview). They differ
@@ -14,7 +14,7 @@ import { BaseComponentPlugin } from './BaseComponentPlugin';
  * Full implementation is planned for a future phase.
  * This stub registers the component type so the CLI can enumerate it.
  */
-export class ContextPlugin extends BaseComponentPlugin {
+export class Context extends BaseComponent {
   readonly type          = PackageType.CONTEXT;
   readonly installSubdir = 'contexts';
 

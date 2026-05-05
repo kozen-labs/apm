@@ -3,26 +3,26 @@ import path from 'path';
 import os   from 'os';
 import { ApmPackage, ApmManifest, InstalledMeta, InstalledPackage, OperationResult } from '../../models/package.model';
 import { PackageType, Provider, Scope } from '../../models/provider.model';
-import { ApmConfigManager } from '../../utils/config';
-import { ApmLockManager }   from '../../utils/lock';
-import { ApmManifestManager } from '../../utils/manifest';
-import * as PluginRegistry   from '../PluginRegistry';
-import * as log              from '../../utils/log';
-import { bareSkillName }     from '../../utils/pkg';
 import {
-  IComponentPlugin,
   ComponentBaseOpts,
   ComponentInstallOpts,
   ComponentSetupOpts,
   ComponentRefreshOpts,
-} from './IComponentPlugin';
+} from '../../models/component.model';
+import { ApmConfigManager }   from '../../services/config';
+import { ApmLockManager }     from '../../services/lock';
+import { ApmManifestManager } from '../../services/manifest';
+import * as PluginRegistry    from '../PluginRegistry';
+import * as log               from '../../utils/log';
+import { bareSkillName }      from '../../utils/pkg';
+import { IComponent }         from './IComponent';
 
 const DEFAULT_CACHE_DIR = path.join(os.homedir(), 'apm.cache');
 const CONFIG_FILE = 'apm.pack.json';
 const LOCK_FILE   = 'apm.lock.json';
 
 /**
- * BaseComponentPlugin — orchestrates between repository (where to get) and
+ * BaseComponent — orchestrates between repository (where to get) and
  * provider (where/how to install). Subclasses override only the type-specific
  * file operations: matchEntry, readMeta, copyTo, removeFrom, listFrom.
  *
@@ -33,7 +33,7 @@ const LOCK_FILE   = 'apm.lock.json';
  *   status()   → fetchInstalled() [all providers]
  *   outdated() → fetchInstalled() filtered
  */
-export abstract class BaseComponentPlugin implements IComponentPlugin {
+export abstract class BaseComponent implements IComponent {
 
   abstract readonly type:          PackageType;
   abstract readonly installSubdir: string;

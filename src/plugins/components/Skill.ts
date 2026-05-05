@@ -3,10 +3,10 @@ import path from 'path';
 import { ApmPackage, InstalledMeta } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
 import { parseFrontmatter } from '../../utils/frontmatter';
-import { BaseComponentPlugin } from './BaseComponentPlugin';
+import { BaseComponent } from './BaseComponent';
 
 /**
- * SkillPlugin — component plugin for ks-* skill directories.
+ * Skill — component for ks-* skill directories.
  *
  * A skill is a directory whose name begins with 'ks-' and that contains
  * a SKILL.md file with YAML frontmatter (description, created, updated).
@@ -20,7 +20,7 @@ import { BaseComponentPlugin } from './BaseComponentPlugin';
  * Default install layout (standard, claude providers):
  *   <installDir>/ks-mongodb-core/  (directory copy)
  */
-export class SkillPlugin extends BaseComponentPlugin {
+export class Skill extends BaseComponent {
   readonly type        = PackageType.SKILL;
   readonly installSubdir = 'skills';
 

@@ -3,8 +3,9 @@ import path from 'path';
 import { ApmLock, ApmLockEntry } from '../models/config.model';
 import { InstalledPackage } from '../models/package.model';
 
-const LOCK_FILENAME = 'apm.lock.json';
+const LOCK_FILENAME = process.env.KOZEN_APM_LOCK_FILE ?? 'apm.lock.json';
 
+/** Reads and writes the apm.lock.json install-state file. */
 export class ApmLockManager {
   private lockPath: string;
 

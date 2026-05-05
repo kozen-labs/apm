@@ -1,6 +1,6 @@
 import path from 'path';
 import os from 'os';
-import { Provider, Scope } from '../../models/provider.model';
+import { Provider, Scope } from '../models/provider.model';
 
 type Key = `${Provider}:${Scope}`;
 type Resolver = (root: string) => string;

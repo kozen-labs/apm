@@ -46,7 +46,7 @@ export interface InstalledPackage {
 }
 
 /**
- * Minimal per-entry result returned by IComponentPlugin.listFrom().
+ * Minimal per-entry result returned by IComponent.listFrom().
  * Providers stamp provider + scope + type before returning InstalledPackage.
  */
 export interface InstalledMeta {

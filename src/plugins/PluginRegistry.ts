@@ -1,11 +1,11 @@
 import { IRepository }     from './repositories/IRepository';
 import { IProvider }       from './providers/IProvider';
-import { IComponentPlugin } from './components/IComponentPlugin';
+import { IComponent } from './components/IComponent';
 import { PackageType }     from '../models/provider.model';
 
 const repositories = new Map<string, IRepository>();
 const providers    = new Map<string, IProvider>();
-const components   = new Map<PackageType, IComponentPlugin>();
+const components   = new Map<PackageType, IComponent>();
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
@@ -39,13 +39,13 @@ export function hasProvider(name: string): boolean { return providers.has(name);
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function registerComponent(plugin: IComponentPlugin): void {
-  components.set(plugin.type, plugin);
+export function registerComponent(component: IComponent): void {
+  components.set(component.type, component);
 }
 
-export function getComponent(type: PackageType): IComponentPlugin {
+export function getComponent(type: PackageType): IComponent {
   const p = components.get(type);
-  if (!p) throw new Error(`No component plugin registered for type "${type}". Call registerComponent() first.`);
+  if (!p) throw new Error(`No component registered for type "${type}". Call registerComponent() first.`);
   return p;
 }
 

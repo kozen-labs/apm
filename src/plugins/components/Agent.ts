@@ -3,10 +3,10 @@ import path from 'path';
 import { ApmPackage, InstalledMeta } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
 import { parseFrontmatter } from '../../utils/frontmatter';
-import { BaseComponentPlugin } from './BaseComponentPlugin';
+import { BaseComponent } from './BaseComponent';
 
 /**
- * AgentPlugin — component plugin for agent .md definition files.
+ * Agent — component for agent .md definition files.
  *
  * An agent is a markdown file with YAML frontmatter (description, created, updated)
  * that defines a sub-agent persona or workflow. It is installed as a single file,
@@ -19,7 +19,7 @@ import { BaseComponentPlugin } from './BaseComponentPlugin';
  * Default install layout:
  *   <installDir>/my-agent.md  (file copy)
  */
-export class AgentPlugin extends BaseComponentPlugin {
+export class Agent extends BaseComponent {
   readonly type          = PackageType.AGENT;
   readonly installSubdir = 'agents';
 

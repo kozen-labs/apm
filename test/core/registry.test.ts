@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { bootstrap } from '../../src/plugins/bootstrap';
-import { SkillPlugin } from '../../src/plugins/components/SkillPlugin';
+import { Skill } from '../../src/plugins/components/Skill';
 import { PackageType } from '../../src/models/provider.model';
 import type { ApmManifest } from '../../src/models/package.model';
 
@@ -63,15 +63,15 @@ const MINIMAL_MANIFEST: ApmManifest = {
   },
 };
 
-describe('SkillPlugin list / status', () => {
+describe('Skill list / status', () => {
   let tmpDir: string;
-  let plugin: SkillPlugin;
+  let plugin: Skill;
 
   beforeAll(() => { bootstrap(); });
 
   beforeEach(() => {
     tmpDir = makeTmpDir();
-    plugin = new SkillPlugin();
+    plugin = new Skill();
     writeConfig(tmpDir);
   });
 

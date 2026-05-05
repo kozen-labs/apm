@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { bootstrap } from '../../src/plugins/bootstrap';
-import { SkillPlugin } from '../../src/plugins/components/SkillPlugin';
+import { Skill } from '../../src/plugins/components/Skill';
 import { PackageType, Provider, Scope } from '../../src/models/provider.model';
 import type { ApmPackage } from '../../src/models/package.model';
 
@@ -44,15 +44,15 @@ function writeConfig(root: string): void {
   );
 }
 
-describe('install / uninstall via SkillPlugin', () => {
+describe('install / uninstall via Skill', () => {
   let tmpDir: string;
-  let plugin: SkillPlugin;
+  let plugin: Skill;
 
   beforeAll(() => { bootstrap(); });
 
   beforeEach(() => {
     tmpDir = makeTmpDir();
-    plugin = new SkillPlugin();
+    plugin = new Skill();
     writeConfig(tmpDir);
   });
 

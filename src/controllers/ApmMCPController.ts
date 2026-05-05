@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { z } from 'zod';
 import { PackageType, Provider, Scope } from '../models/provider.model';
 import { findProjectRoot } from '../utils/system';
-import type { IComponentPlugin } from '../plugins/components/IComponentPlugin';
+import type { IComponent } from '../plugins/components/IComponent';
 
 /**
  * ApmMCPController — thin dispatcher over the component plugin system.
@@ -44,8 +44,8 @@ export class ApmMCPController extends MCPController {
 
   // ── plugin resolution ─────────────────────────────────────────────────────
 
-  private async plugin(type: string): Promise<IComponentPlugin> {
-    return this.assistant!.resolve<IComponentPlugin>(`apm:plugin:component:${type}`);
+  private async plugin(type: string): Promise<IComponent> {
+    return this.assistant!.resolve<IComponent>(`apm:plugin:component:${type}`);
   }
 
   // ── register tools ────────────────────────────────────────────────────────
