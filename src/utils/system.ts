@@ -1,7 +1,7 @@
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import { CONFIG_FILENAME } from '../core/config';
+import { CONFIG_FILENAME } from './config';
 
 export type OsType = 'windows' | 'macos' | 'linux';
 

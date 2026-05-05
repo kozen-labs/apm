@@ -3,12 +3,12 @@ import path from 'path';
 import os   from 'os';
 import { ApmPackage, ApmManifest, InstalledMeta, InstalledPackage, OperationResult } from '../../models/package.model';
 import { PackageType } from '../../models/provider.model';
-import { ApmConfigManager, CONFIG_FILENAME } from '../../core/config';
-import { ApmLockManager, LOCK_FILENAME }     from '../../core/lock';
-import { ApmManifestManager }                from '../../core/manifest-manager';
-import { ApmRegistry }                       from '../../core/registry';
-import { ApmInstaller }                      from '../../core/installer';
-import * as PluginRegistry                   from '../../core/PluginRegistry';
+import { ApmConfigManager, CONFIG_FILENAME } from '../../utils/config';
+import { ApmLockManager, LOCK_FILENAME }     from '../../utils/lock';
+import { ApmManifestManager }                from '../../utils/manifest';
+import { ApmRegistry }                       from './registry';
+import { ApmInstaller }                      from './installer';
+import * as PluginRegistry                   from '../PluginRegistry';
 import * as log                              from '../../utils/log';
 import {
   IComponentPlugin,

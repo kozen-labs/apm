@@ -3,29 +3,13 @@ import path from 'path';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
 import { PackageType, inferGroup } from '../../models/provider.model';
-import { IRepositoryStrategy } from './IRepositoryStrategy';
-import { getComponent, hasComponent } from '../../core/PluginRegistry';
+import { IRepository } from './IRepository';
+import { getComponent, hasComponent } from '../PluginRegistry';
 
 const DEFAULT_SKILLS_PATH = path.join('.agents', 'skills');
 const DEFAULT_AGENTS_PATH = path.join('.agents', 'agents');
 
-/**
- * LocalRepositoryStrategy — reads packages from a directory on disk.
- *
- * Delegates entry matching and metadata extraction to registered
- * IComponentPlugin instances (SkillPlugin, AgentPlugin, …), so new
- * component types are picked up automatically without modifying this file.
- *
- * Source config:
- *   type: 'local'
- *   path: '.'                    (relative to projectRoot, default '.')
- *   skillsPath: '.agents/skills' (relative to source root, default shown)
- *   agentsPath: '.agents/agents' (relative to source root, default shown)
- *   namespace: 'myteam'          (optional name prefix)
- *   singleResource: true         (entire source root is one skill package)
- *   resourceName: 'my-skill'     (explicit name for singleResource)
- */
-export class LocalRepositoryStrategy implements IRepositoryStrategy {
+export class LocalRepository implements IRepository {
   readonly type = 'local';
 
   list(source: ApmSource, _cacheDir: string, projectRoot: string): ApmPackage[] {
@@ -64,11 +48,6 @@ export class LocalRepositoryStrategy implements IRepositoryStrategy {
     return path.resolve(projectRoot, source.path ?? '.');
   }
 
-  /**
-   * Scan a directory for all packages of a given type.
-   * Delegates entry detection and metadata to the registered IComponentPlugin.
-   * Falls back to a built-in scan when no component plugin is registered for the type.
-   */
   private scanDir(dir: string, type: PackageType, source: ApmSource): ApmPackage[] {
     if (!fs.existsSync(dir)) return [];
     const pkgs: ApmPackage[] = [];
@@ -79,7 +58,6 @@ export class LocalRepositoryStrategy implements IRepositoryStrategy {
         if (!component.matchEntry(entry, dir)) continue;
         const entryPath = path.join(dir, entry.name);
         const meta      = component.readMeta(entryPath, entry.name);
-        // For agents the component stores baseName separately (entry.name includes .md).
         const baseName  = (meta as { _baseName?: string })._baseName ?? entry.name;
         pkgs.push({
           name:        this.withNs(source.namespace, baseName),

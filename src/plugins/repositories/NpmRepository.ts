@@ -3,32 +3,13 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
-import { IRepositoryStrategy } from './IRepositoryStrategy';
-import { LocalRepositoryStrategy } from './LocalRepositoryStrategy';
+import { IRepository } from './IRepository';
+import { LocalRepository } from './LocalRepository';
 
-/**
- * NpmRepositoryStrategy — installs an npm package into a local cache directory
- * and delegates package scanning to LocalRepositoryStrategy.
- *
- * Source config:
- *   type: 'npm'
- *   package: '@mongodb/agent-skills'   (npm package name)
- *   skillsPath: '.agents/skills'        (path within the package, optional)
- *   agentsPath: '.agents/agents'        (optional)
- *   namespace:  'mongodb'               (optional name prefix)
- *
- * Cache layout:
- *   {cacheDir}/npm/{sanitizedName}/
- *     package.json           (npm project with the package as dependency)
- *     node_modules/{package}/ (the installed package tree)
- *     .apm-last-refresh      (ISO timestamp of last npm install)
- *
- * Requires: npm on PATH.
- */
-export class NpmRepositoryStrategy implements IRepositoryStrategy {
+export class NpmRepository implements IRepository {
   readonly type = 'npm';
 
-  private local = new LocalRepositoryStrategy();
+  private local = new LocalRepository();
 
   list(source: ApmSource, cacheDir: string, _projectRoot: string): ApmPackage[] {
     const pkgDir = this.ensureInstalled(source, cacheDir);
@@ -104,7 +85,7 @@ export class NpmRepositoryStrategy implements IRepositoryStrategy {
   private requirePackage(source: ApmSource): string {
     if (!source.package) {
       throw new Error(
-        `npm source "${source.name}" is missing a "package" field in apm.config.json.`,
+        `npm source "${source.name}" is missing a "package" field in apm.pack.json.`,
       );
     }
     if (!/^[@a-zA-Z0-9/_.-]+$/.test(source.package)) {

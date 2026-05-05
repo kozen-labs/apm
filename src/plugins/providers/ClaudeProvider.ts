@@ -1,27 +1,20 @@
+import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { ApmPackage, InstalledPackage } from '../../models/package.model';
 import { PackageType, Provider, Scope } from '../../models/provider.model';
 import { bareSkillName } from '../../utils/pkg';
-import { getComponent } from '../../core/PluginRegistry';
-import { IProviderStrategy } from './IProviderStrategy';
+import { getComponent } from '../PluginRegistry';
+import { IProvider } from './IProvider';
 
-/**
- * VscodeProviderStrategy — installs to the .vscode/skills/ tree.
- *
- * local scope:  <projectRoot>/.vscode/skills/
- * global scope: ~/.vscode/skills/
- *
- * Delegates install, uninstall, and listInstalled to IComponentPlugin.
- */
-export class VscodeProviderStrategy implements IProviderStrategy {
-  readonly name = Provider.VSCODE;
+export class ClaudeProvider implements IProvider {
+  readonly name = Provider.CLAUDE;
 
   getInstallPath(scope: Scope, projectRoot: string, customDir?: string): string {
     if (customDir) return customDir;
     return scope === Scope.GLOBAL
-      ? path.join(os.homedir(), '.vscode', 'skills')
-      : path.join(projectRoot,  '.vscode', 'skills');
+      ? path.join(os.homedir(), '.claude', 'skills')
+      : path.join(projectRoot,  '.claude', 'skills');
   }
 
   install(pkg: ApmPackage, pkgLocalPath: string, installPath: string): void {
@@ -36,7 +29,7 @@ export class VscodeProviderStrategy implements IProviderStrategy {
     return getComponent(type).listFrom(installPath, sourceMap).map(e => ({
       name:          e.name,
       type,
-      provider:      Provider.VSCODE,
+      provider:      Provider.CLAUDE,
       scope:         Scope.LOCAL,
       installPath:   e.installPath,
       updated:       e.installedUpdated,
@@ -45,5 +38,16 @@ export class VscodeProviderStrategy implements IProviderStrategy {
     }));
   }
 
-  postInstall(): void { /* no-op */ }
+  postInstall(installPath: string, sourceRoot: string): void {
+    const src = path.join(sourceRoot, '.claude', 'manifest.json');
+    if (!fs.existsSync(src)) return;
+    try {
+      let text = fs.readFileSync(src, 'utf-8');
+      text = text.replace(/"\.\.\/\.agents\/skills\//g, '"');
+      text = text.replace(/"\.\.\/\.claude\/skills\//g, '"');
+      fs.writeFileSync(path.join(installPath, 'manifest.json'), text, 'utf-8');
+    } catch {
+      // manifest.json is best-effort — don't fail the install.
+    }
+  }
 }

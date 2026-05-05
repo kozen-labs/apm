@@ -4,31 +4,15 @@ import os from 'os';
 import { execSync } from 'child_process';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
-import { IRepositoryStrategy } from './IRepositoryStrategy';
-import { LocalRepositoryStrategy } from './LocalRepositoryStrategy';
+import { IRepository } from './IRepository';
+import { LocalRepository } from './LocalRepository';
 
 const STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-/**
- * GitHubRepositoryStrategy — clones or updates a GitHub repository to a local
- * cache directory, then delegates package scanning to LocalRepositoryStrategy.
- *
- * Source config:
- *   type: 'github'
- *   url: 'https://github.com/mongodb/agent-skills'
- *   ref: 'main'                  (branch/tag, optional)
- *   skillsPath: '.agents/skills' (path within cloned repo, optional)
- *   agentsPath: '.agents/agents' (optional)
- *   namespace: 'mongodb'         (optional name prefix)
- *   singleResource: true         (if the repo itself is one skill)
- *
- * Cache location: {cacheDir}/{source.name}/
- * Requires: git on PATH.
- */
-export class GitHubRepositoryStrategy implements IRepositoryStrategy {
+export class GitHubRepository implements IRepository {
   readonly type = 'github';
 
-  private local = new LocalRepositoryStrategy();
+  private local = new LocalRepository();
 
   list(source: ApmSource, cacheDir: string, _projectRoot: string): ApmPackage[] {
     const repoDir = this.getRepoDir(source, cacheDir);

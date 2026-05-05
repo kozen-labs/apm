@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { WindsurfProviderStrategy } from '../../src/plugins/providers/WindsurfProviderStrategy';
+import { WindsurfProvider } from '../../src/plugins/providers/WindsurfProvider';
 import { PackageType, Provider, Scope } from '../../src/models/provider.model';
 import type { ApmPackage } from '../../src/models/package.model';
 
@@ -31,13 +31,13 @@ function seedSkill(root: string, name: string): { pkg: ApmPackage; skillDir: str
   return { pkg, skillDir };
 }
 
-describe('WindsurfProviderStrategy', () => {
+describe('WindsurfProvider', () => {
   let tmpDir: string;
-  let strategy: WindsurfProviderStrategy;
+  let strategy: WindsurfProvider;
 
   beforeEach(() => {
     tmpDir   = makeTmpDir();
-    strategy = new WindsurfProviderStrategy();
+    strategy = new WindsurfProvider();
   });
 
   afterEach(() => {

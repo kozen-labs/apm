@@ -29,35 +29,35 @@
   },
 
   "apm:plugin:provider:standard": {
-    "target":       "StandardProviderStrategy",
+    "target":       "StandardProvider",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/providers",
     "dependencies": []
   },
   "apm:plugin:provider:claude": {
-    "target":       "ClaudeProviderStrategy",
+    "target":       "ClaudeProvider",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/providers",
     "dependencies": []
   },
   "apm:plugin:provider:cursor": {
-    "target":       "CursorProviderStrategy",
+    "target":       "CursorProvider",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/providers",
     "dependencies": []
   },
   "apm:plugin:provider:vscode": {
-    "target":       "VscodeProviderStrategy",
+    "target":       "VscodeProvider",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/providers",
     "dependencies": []
   },
   "apm:plugin:provider:windsurf": {
-    "target":       "WindsurfProviderStrategy",
+    "target":       "WindsurfProvider",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/providers",
@@ -65,35 +65,35 @@
   },
 
   "apm:plugin:repository:local": {
-    "target":       "LocalRepositoryStrategy",
+    "target":       "LocalRepository",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/repositories",
     "dependencies": []
   },
   "apm:plugin:repository:github": {
-    "target":       "GitHubRepositoryStrategy",
+    "target":       "GitHubRepository",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/repositories",
     "dependencies": []
   },
   "apm:plugin:repository:npm": {
-    "target":       "NpmRepositoryStrategy",
+    "target":       "NpmRepository",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/repositories",
     "dependencies": []
   },
   "apm:plugin:repository:skillssh": {
-    "target":       "SkillsShRepositoryStrategy",
+    "target":       "SkillsShRepository",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/repositories",
     "dependencies": []
   },
   "apm:plugin:repository:awesomeclaude": {
-    "target":       "AwesomeClaudeRegistryStrategy",
+    "target":       "AwesomeClaudeRepository",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/repositories",

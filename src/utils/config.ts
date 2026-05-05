@@ -4,17 +4,9 @@ import { ApmConfig, ApmSource } from '../models/config.model';
 
 export const CONFIG_FILENAME = 'apm.pack.json';
 
-/**
- * Default configuration created on first run.
- *
- * The local source (enabled: true) is always active.
- * Community sources are pre-configured but disabled by default.
- * To enable one, set "enabled": true and run `apm refresh <name>`.
- */
 const DEFAULT_CONFIG: ApmConfig = {
   schemaVersion: '1.0',
   sources: [
-    // ── Local project source (always active) ────────────────────────────
     {
       name:        'local',
       type:        'local',
@@ -22,7 +14,6 @@ const DEFAULT_CONFIG: ApmConfig = {
       description: 'Local project .agents/ directory',
       enabled:     true,
     },
-    // ── Official Kozen registry ───────────────────────────────────────────
     {
       name:        'kozen',
       type:        'github',
@@ -33,7 +24,6 @@ const DEFAULT_CONFIG: ApmConfig = {
       description: 'Official Kozen community skill and agent registry',
       enabled:     false,
     },
-    // ── Community repositories (disabled until you enable them) ──────────
     {
       name:        'mongodb-official',
       type:        'github',
@@ -90,20 +80,9 @@ const DEFAULT_CONFIG: ApmConfig = {
     },
   ],
   defaultProvider: 'standard',
-  defaultScope: 'global',
+  defaultScope:    'global',
 };
 
-/**
- * Reads, writes, and creates apm.pack.json at the project root.
- *
- * The config tells APM where to find packages (sources) and provides
- * install defaults.
- *
- * Config file resolution priority:
- *   1. Explicit `configPath` constructor argument
- *   2. KOZEN_APM_CONFIG environment variable (absolute or relative to projectRoot)
- *   3. <projectRoot>/apm.pack.json (default)
- */
 export class ApmConfigManager {
   private configPath: string;
 
@@ -114,12 +93,8 @@ export class ApmConfigManager {
       : path.join(projectRoot, CONFIG_FILENAME);
   }
 
-  /** Absolute path to the config file used by this manager instance. */
-  getConfigPath(): string {
-    return this.configPath;
-  }
+  getConfigPath(): string { return this.configPath; }
 
-  /** Parse and return the config, or null when the file does not exist. */
   read(): ApmConfig | null {
     try {
       return JSON.parse(fs.readFileSync(this.configPath, 'utf-8')) as ApmConfig;
@@ -128,15 +103,10 @@ export class ApmConfigManager {
     }
   }
 
-  /** Serialise and persist the config. */
   write(config: ApmConfig): void {
     fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
   }
 
-  /**
-   * Return the existing config, or create and persist a default one.
-   * The default config points to the local project root as the only source.
-   */
   getOrCreate(): ApmConfig {
     const existing = this.read();
     if (existing) return existing;
@@ -144,11 +114,6 @@ export class ApmConfigManager {
     return { ...DEFAULT_CONFIG, sources: [...DEFAULT_CONFIG.sources] };
   }
 
-  /**
-   * Return all resolved absolute paths for local sources.
-   * Paths are resolved relative to projectRoot.
-   * Falls back to [projectRoot] when no config is present.
-   */
   getLocalSourceRoots(): string[] {
     const config = this.read();
     if (!config) return [this.projectRoot];
@@ -159,19 +124,16 @@ export class ApmConfigManager {
     return locals.map((s: ApmSource) => path.resolve(this.projectRoot, s.path!));
   }
 
-  /** Primary source root: the first resolved local source, or projectRoot. */
   getPrimarySourceRoot(): string {
     return this.getLocalSourceRoots()[0];
   }
 
-  /** All sources with enabled !== false, sorted: local first. */
   getEnabledSources(): ApmSource[] {
     const config = this.read();
     if (!config) return DEFAULT_CONFIG.sources.filter(s => s.enabled !== false);
     return config.sources.filter(s => s.enabled !== false);
   }
 
-  /** All sources including disabled ones (for `apm list --all-sources`). */
   getAllSources(): ApmSource[] {
     return this.read()?.sources ?? DEFAULT_CONFIG.sources;
   }

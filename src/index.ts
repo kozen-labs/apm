@@ -1,19 +1,12 @@
 import fs                               from 'fs';
 import path                            from 'path';
 import { KzModule, IConfig, IDependency } from '@kozen/engine';
-import { bootstrap }      from './core/bootstrap';
+import { bootstrap }      from './plugins/bootstrap';
 import { findProjectRoot } from './utils/system';
 import iocJson             from './configs/ioc.json';
 import cliJson             from './configs/cli.json';
 import mcpJson             from './configs/mcp.json';
 
-/**
- * ApmModule — Kozen module entry point for @kozen/apm.
- *
- * Load via:
- *   npx kozen --moduleLoad=@kozen/apm --action=apm:<action>
- *   npx kozen --moduleLoad=@kozen/apm --type=mcp
- */
 export class ApmModule extends KzModule {
 
   constructor(dependency?: any) {
@@ -34,28 +27,18 @@ export class ApmModule extends KzModule {
     } catch { /* ignore — metadata is optional */ }
   }
 
-  /**
-   * Register IoC dependencies for the current runtime type (cli | mcp | sdk).
-   *
-   * KZN-005 workaround: projectRoot is auto-detected here instead of reading CLI
-   * args (which are not passed to register()). When KZN-005 is resolved, replace
-   * findProjectRoot() with: (opts as any)?.projectRoot ?? findProjectRoot()
-   */
   public async register(
     config: IConfig | null,
     opts?:  unknown,
   ): Promise<Record<string, IDependency> | null> {
 
-    // 1. Populate PluginRegistry Maps (idempotent)
     bootstrap();
 
-    // 2. Resolve project root — CLI arg override > opts > config > auto-detect
     const projectRoot: string =
       (opts  as Record<string, unknown>)?.projectRoot as string ??
       (config as Record<string, unknown>)?.projectRoot as string ??
       findProjectRoot();
 
-    // 3. Register projectRoot as a runtime-computed IoC value (KZN-002 pattern)
     const dynamic: Record<string, unknown> = {
       'apm:project-root': {
         key:    'apm:project-root',
@@ -65,7 +48,6 @@ export class ApmModule extends KzModule {
       },
     };
 
-    // 4. Merge base + dynamic + runtime-specific deps
     let dep: Record<string, unknown> = { ...iocJson, ...dynamic };
     if (config?.type === 'cli') dep = { ...dep, ...cliJson };
     if (config?.type === 'mcp') dep = { ...dep, ...mcpJson };
@@ -76,34 +58,34 @@ export class ApmModule extends KzModule {
 
 export default ApmModule;
 
-// ── Public library API (barrel re-exports) ─────────────────────────────────
+// ── Public library API ─────────────────────────────────────────────────────
 
-export { ApmRegistry }         from './core/registry';
-export { ApmInstaller }        from './core/installer';
-export { ApmManifestManager }  from './core/manifest-manager';
-export { ApmConfigManager }    from './core/config';
-export { ApmLockManager }      from './core/lock';
-export { bootstrap }           from './core/bootstrap';
-export * as PluginRegistry     from './core/PluginRegistry';
+export { ApmRegistry }        from './plugins/components/registry';
+export { ApmInstaller }       from './plugins/components/installer';
+export { ApmManifestManager } from './utils/manifest';
+export { ApmConfigManager }   from './utils/config';
+export { ApmLockManager }     from './utils/lock';
+export { bootstrap }          from './plugins/bootstrap';
+export * as PluginRegistry    from './plugins/PluginRegistry';
 
 // ── Plugin interfaces ──────────────────────────────────────────────────────
-export { type IRepositoryStrategy } from './plugins/repositories/IRepositoryStrategy';
-export { type IProviderStrategy }   from './plugins/providers/IProviderStrategy';
-export { type IComponentPlugin }    from './plugins/components/IComponentPlugin';
+export { type IRepository }     from './plugins/repositories/IRepository';
+export { type IProvider }       from './plugins/providers/IProvider';
+export { type IComponentPlugin } from './plugins/components/IComponentPlugin';
 
-// ── Repository strategies ──────────────────────────────────────────────────
-export { LocalRepositoryStrategy }       from './plugins/repositories/LocalRepositoryStrategy';
-export { GitHubRepositoryStrategy }      from './plugins/repositories/GitHubRepositoryStrategy';
-export { NpmRepositoryStrategy }         from './plugins/repositories/NpmRepositoryStrategy';
-export { SkillsShRepositoryStrategy }    from './plugins/repositories/SkillsShRepositoryStrategy';
-export { AwesomeClaudeRegistryStrategy } from './plugins/repositories/AwesomeClaudeRegistryStrategy';
+// ── Repositories ───────────────────────────────────────────────────────────
+export { LocalRepository }         from './plugins/repositories/LocalRepository';
+export { GitHubRepository }        from './plugins/repositories/GitHubRepository';
+export { NpmRepository }           from './plugins/repositories/NpmRepository';
+export { SkillsShRepository }      from './plugins/repositories/SkillsShRepository';
+export { AwesomeClaudeRepository } from './plugins/repositories/AwesomeClaudeRepository';
 
-// ── Provider strategies ────────────────────────────────────────────────────
-export { StandardProviderStrategy } from './plugins/providers/StandardProviderStrategy';
-export { ClaudeProviderStrategy }   from './plugins/providers/ClaudeProviderStrategy';
-export { CursorProviderStrategy }   from './plugins/providers/CursorProviderStrategy';
-export { VscodeProviderStrategy }   from './plugins/providers/VscodeProviderStrategy';
-export { WindsurfProviderStrategy } from './plugins/providers/WindsurfProviderStrategy';
+// ── Providers ──────────────────────────────────────────────────────────────
+export { StandardProvider } from './plugins/providers/StandardProvider';
+export { ClaudeProvider }   from './plugins/providers/ClaudeProvider';
+export { CursorProvider }   from './plugins/providers/CursorProvider';
+export { VscodeProvider }   from './plugins/providers/VscodeProvider';
+export { WindsurfProvider }  from './plugins/providers/WindsurfProvider';
 export {
   resolveInstallPath,
   allSkillLocations,

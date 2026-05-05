@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { bootstrap } from '../../src/core/bootstrap';
-import { ApmInstaller } from '../../src/core/installer';
+import { bootstrap } from '../../src/plugins/bootstrap';
+import { ApmInstaller } from '../../src/plugins/components/installer';
 import { PackageType, Provider, Scope } from '../../src/models/provider.model';
 import type { ApmPackage } from '../../src/models/package.model';
 

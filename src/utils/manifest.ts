@@ -2,16 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { ApmManifest, ApmPackage } from '../models/package.model';
 import { PackageType, inferGroup } from '../models/provider.model';
-import { parseFrontmatter } from '../utils/frontmatter';
+import { parseFrontmatter } from './frontmatter';
 
 const MANIFEST_RELATIVE = path.join('.agents', 'apm.json');
 
-/**
- * Reads, writes, and auto-generates the `.agents/apm.json` registry.
- *
- * The manifest is the primary source for package discovery (fast path).
- * When it is absent, `ApmRegistry` falls back to live directory scanning.
- */
 export class ApmManifestManager {
   private manifestPath: string;
 
@@ -19,7 +13,6 @@ export class ApmManifestManager {
     this.manifestPath = path.join(projectRoot, MANIFEST_RELATIVE);
   }
 
-  /** Read and parse the manifest. Returns null when the file does not exist. */
   read(): ApmManifest | null {
     try {
       const text = fs.readFileSync(this.manifestPath, 'utf-8');
@@ -29,21 +22,16 @@ export class ApmManifestManager {
     }
   }
 
-  /** Serialise and persist the manifest to disk. */
   write(manifest: ApmManifest): void {
     fs.mkdirSync(path.dirname(this.manifestPath), { recursive: true });
     fs.writeFileSync(this.manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
   }
 
-  /**
-   * Scan the source directories and build a fresh manifest.
-   * Called by `apm init` and used as fallback when `apm.json` is absent.
-   */
   generate(): ApmManifest {
     const skillsDir = path.join(this.projectRoot, '.agents', 'skills');
     const agentsDir = path.join(this.projectRoot, '.agents', 'agents');
 
-    const manifest: ApmManifest = {
+    return {
       schemaVersion: '1.0',
       name:          'sdlc-skills-pack',
       displayName:   'SDLC Skills Pack',
@@ -54,7 +42,6 @@ export class ApmManifestManager {
         agents: this.scanAgents(agentsDir),
       },
     };
-    return manifest;
   }
 
   // ── private ──────────────────────────────────────────────────────────────

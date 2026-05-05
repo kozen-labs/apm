@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ApmRegistry } from '../../src/core/registry';
+import { ApmRegistry } from '../../src/plugins/components/registry';
 import { PackageType } from '../../src/models/provider.model';
 import type { ApmManifest } from '../../src/models/package.model';
 

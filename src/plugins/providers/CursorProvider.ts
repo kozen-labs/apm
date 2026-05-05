@@ -5,22 +5,9 @@ import { ApmPackage, InstalledPackage } from '../../models/package.model';
 import { PackageType, Provider, Scope } from '../../models/provider.model';
 import { parseFrontmatter, stripFrontmatter } from '../../utils/frontmatter';
 import { bareSkillName } from '../../utils/pkg';
-import { IProviderStrategy } from './IProviderStrategy';
+import { IProvider } from './IProvider';
 
-/**
- * CursorProviderStrategy — installs to Cursor's .cursor/rules/ as .mdc files.
- *
- * local scope:  <projectRoot>/.cursor/rules/
- * global scope: ~/.cursor/rules/
- *
- * Skills are converted: SKILL.md frontmatter → Cursor description + globs header,
- * body content → .mdc body.
- * Agents are not supported (Cursor uses .mdc rule files only).
- *
- * Format conversion is Cursor-specific, so install/listInstalled are implemented
- * directly here rather than delegating to IComponentPlugin.
- */
-export class CursorProviderStrategy implements IProviderStrategy {
+export class CursorProvider implements IProvider {
   readonly name = Provider.CURSOR;
 
   getInstallPath(scope: Scope, projectRoot: string, customDir?: string): string {

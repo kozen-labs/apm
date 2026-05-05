@@ -5,21 +5,9 @@ import { ApmPackage, InstalledPackage } from '../../models/package.model';
 import { PackageType, Provider, Scope } from '../../models/provider.model';
 import { parseFrontmatter, stripFrontmatter } from '../../utils/frontmatter';
 import { bareSkillName } from '../../utils/pkg';
-import { IProviderStrategy } from './IProviderStrategy';
+import { IProvider } from './IProvider';
 
-/**
- * WindsurfProviderStrategy — installs to Windsurf's .windsurf/rules/ directory.
- *
- * local scope:  <projectRoot>/.windsurf/rules/
- * global scope: ~/.windsurf/rules/
- *
- * Skills are converted: SKILL.md body content → .windsurfrules file.
- * Agents are not supported (Windsurf uses rule files only).
- *
- * Format conversion is Windsurf-specific, so install/listInstalled are
- * implemented directly rather than delegating to IComponentPlugin.
- */
-export class WindsurfProviderStrategy implements IProviderStrategy {
+export class WindsurfProvider implements IProvider {
   readonly name = Provider.WINDSURF;
 
   getInstallPath(scope: Scope, projectRoot: string, customDir?: string): string {
@@ -38,11 +26,7 @@ export class WindsurfProviderStrategy implements IProviderStrategy {
     }
 
     const body = stripFrontmatter(skillMd);
-    const desc = pkg.description
-      .replace(/"/g, "'")
-      .replace(/\n/g, ' ')
-      .trim()
-      .slice(0, 120);
+    const desc = pkg.description.replace(/"/g, "'").replace(/\n/g, ' ').trim().slice(0, 120);
     const content = `---\ndescription: "${desc}"\nupdated: "${pkg.updated}"\n---\n\n${body}`;
     fs.writeFileSync(
       path.join(installPath, `${bareSkillName(pkg.name)}.windsurfrules`),
@@ -71,10 +55,10 @@ export class WindsurfProviderStrategy implements IProviderStrategy {
       const sourceUpdated    = sourceMap.get(name) ?? '';
       out.push({
         name, type,
-        provider:    Provider.WINDSURF,
-        scope:       Scope.LOCAL,
-        installPath: path.join(installPath, f),
-        updated:       installedUpdated,
+        provider:     Provider.WINDSURF,
+        scope:        Scope.LOCAL,
+        installPath:  path.join(installPath, f),
+        updated:      installedUpdated,
         sourceUpdated,
         isOutdated: !!sourceUpdated && !!installedUpdated && sourceUpdated > installedUpdated,
       });
