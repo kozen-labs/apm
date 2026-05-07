@@ -1,10 +1,25 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { bootstrap } from '../../src/plugins/bootstrap';
 import { Skill } from '../../src/plugins/components/Skill';
-import { PackageType } from '../../src/models/provider.model';
-import type { ApmManifest } from '../../src/models/package.model';
+import { StandardProvider } from '../../src/plugins/providers/StandardProvider';
+import { LocalRepository } from '../../src/plugins/repositories/LocalRepository';
+import { PackageType, Provider } from '../../src/models/provider.model';
+import type { IIoC } from '@kozen/engine';
+
+function makeSkill(): Skill {
+  const localRepo    = new LocalRepository();
+  const standardProv = new StandardProvider();
+
+  const resolveSync = (key: string): unknown => {
+    if (key === `apm:plugin:provider:${Provider.STANDARD}`) return standardProv;
+    if (key.startsWith('apm:plugin:provider:'))             return standardProv;
+    if (key === 'apm:plugin:repository:local')              return localRepo;
+    throw new Error(`Test: unresolved IoC key: ${key}`);
+  };
+
+  return new Skill({ assistant: { resolveSync } as unknown as IIoC, logger: undefined as any });
+}
 
 function makeTmpDir(): string {
   const dir = path.join(os.tmpdir(), `apm-registry-test-${Date.now()}`);
@@ -24,54 +39,22 @@ function writeConfig(root: string): void {
   );
 }
 
-function writeManifest(root: string, manifest: ApmManifest): void {
-  const dest = path.join(root, '.agents', 'apm.json');
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, JSON.stringify(manifest, null, 2));
+function seedSkill(root: string, name: string): void {
+  const skillDir = path.join(root, '.agents', 'skills', name);
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(skillDir, 'SKILL.md'),
+    `---\ndescription: Test\ncreated: 2024-01-01\nupdated: 2025-01-01\nversion: 1.0.0\n---\n\n# ${name}\n`,
+  );
 }
-
-const MINIMAL_MANIFEST: ApmManifest = {
-  schemaVersion: '1.0',
-  name:          'test',
-  displayName:   'Test',
-  version:       '1.0.0',
-  description:   '',
-  packages: {
-    skills: [
-      {
-        name:        'ks-mongodb-core',
-        path:        'skills/ks-mongodb-core',
-        type:        PackageType.SKILL,
-        description: 'Core MongoDB',
-        group:       'MongoDB',
-        created:     '2024-01-01',
-        updated:     '2025-04-01',
-        version:     '1.0.0',
-      },
-    ],
-    agents: [
-      {
-        name:        'agent-one',
-        path:        'agents/agent-one.md',
-        type:        PackageType.AGENT,
-        description: 'Test agent',
-        group:       'MongoDB',
-        created:     '2024-01-01',
-        updated:     '2024-12-01',
-      },
-    ],
-  },
-};
 
 describe('Skill list / status', () => {
   let tmpDir: string;
   let plugin: Skill;
 
-  beforeAll(() => { bootstrap(); });
-
   beforeEach(() => {
     tmpDir = makeTmpDir();
-    plugin = new Skill();
+    plugin = makeSkill();
     writeConfig(tmpDir);
   });
 
@@ -80,28 +63,30 @@ describe('Skill list / status', () => {
   });
 
   describe('list() — available packages', () => {
-    it('reads skills from the manifest', () => {
-      writeManifest(tmpDir, MINIMAL_MANIFEST);
+    it('discovers skills from the .agents/skills directory', () => {
+      seedSkill(tmpDir, 'ks-mongodb-core');
       const skills = plugin.list({ projectRoot: tmpDir });
       expect(skills).toHaveLength(1);
       expect(skills[0].name).toBe('ks-mongodb-core');
     });
 
     it('does not return agents when listing skills', () => {
-      writeManifest(tmpDir, MINIMAL_MANIFEST);
+      seedSkill(tmpDir, 'ks-mongodb-core');
+      seedSkill(tmpDir, 'ks-security-patterns');
       const skills = plugin.list({ projectRoot: tmpDir });
       expect(skills.every(p => p.type === PackageType.SKILL)).toBe(true);
     });
 
-    it('falls back to live scan when manifest is absent (returns array)', () => {
+    it('returns an empty array when no skill directories exist', () => {
       const skills = plugin.list({ projectRoot: tmpDir });
       expect(Array.isArray(skills)).toBe(true);
+      expect(skills).toHaveLength(0);
     });
   });
 
   describe('status() — installed packages', () => {
     it('returns an empty array when no packages are installed', () => {
-      writeManifest(tmpDir, MINIMAL_MANIFEST);
+      seedSkill(tmpDir, 'ks-mongodb-core');
       const installed = plugin.status({ projectRoot: tmpDir });
       expect(Array.isArray(installed)).toBe(true);
     });

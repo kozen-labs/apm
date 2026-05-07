@@ -8,7 +8,7 @@ import { execSync } from 'child_process';
 import { NpmRepository } from '../../src/plugins/repositories/NpmRepository';
 import { PackageType } from '../../src/models/provider.model';
 import type { ApmSource } from '../../src/models/config.model';
-import { bootstrap } from '../../src/plugins/bootstrap';
+import type { IComponentScanner } from '../../src/models/component.model';
 
 const mockedExec = execSync as jest.Mock;
 
@@ -16,6 +16,14 @@ function makeTmpDir(): string {
   const dir = path.join(os.tmpdir(), `apm-npm-test-${Date.now()}`);
   fs.mkdirSync(dir, { recursive: true });
   return dir;
+}
+
+function mockScanner(): IComponentScanner {
+  return {
+    type:       PackageType.SKILL,
+    matchEntry: (entry) => entry.isDirectory(),
+    readMeta:   () => ({ description: 'Test', created: '2024-01-01', updated: '2025-01-01' }),
+  };
 }
 
 function makeSource(overrides: Partial<ApmSource> = {}): ApmSource {
@@ -46,8 +54,6 @@ describe('NpmRepository', () => {
   let tmpDir: string;
   let strategy: NpmRepository;
 
-  beforeAll(() => { bootstrap(); });
-
   beforeEach(() => {
     tmpDir   = makeTmpDir();
     strategy = new NpmRepository();
@@ -69,7 +75,7 @@ describe('NpmRepository', () => {
         return Buffer.from('');
       });
 
-      const pkgs = strategy.list(source, tmpDir, '/project');
+      const pkgs = strategy.list(source, tmpDir, '/project', mockScanner());
 
       expect(pkgs.length).toBeGreaterThan(0);
       expect(pkgs[0].name).toBe('ks-example');
@@ -81,14 +87,14 @@ describe('NpmRepository', () => {
       const workDir = path.join(tmpDir, 'npm', 'my-skills-package');
       seedPackage(workDir, 'my-skills-package');
 
-      strategy.list(source, tmpDir, '/project');
+      strategy.list(source, tmpDir, '/project', mockScanner());
 
       expect(mockedExec).not.toHaveBeenCalled();
     });
 
     it('throws when the source has no package field', () => {
       const source = makeSource({ package: undefined });
-      expect(() => strategy.list(source, tmpDir, '/project'))
+      expect(() => strategy.list(source, tmpDir, '/project', mockScanner()))
         .toThrow(/missing a "package" field/);
     });
 
@@ -100,7 +106,7 @@ describe('NpmRepository', () => {
         .mockReturnValueOnce(Buffer.from('10.0.0'))
         .mockImplementationOnce(() => { throw new Error('npm ERR! not found'); });
 
-      expect(() => strategy.list(source, tmpDir, '/project')).toThrow(/Failed to install/);
+      expect(() => strategy.list(source, tmpDir, '/project', mockScanner())).toThrow(/Failed to install/);
     });
   });
 

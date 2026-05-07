@@ -2,9 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { ApmPackage, InstalledPackage } from '../../models/package.model';
-import { PackageType, Provider, Scope } from '../../models/provider.model';
+import { Provider, Scope } from '../../models/provider.model';
+import { ApmSource } from '../../models/config.model';
+import { IComponentOps } from '../../models/component.model';
 import { bareSkillName } from '../../utils/pkg';
-import { getComponent } from '../PluginRegistry';
+import { IRepository } from '../repositories/IRepository';
 import { IProvider } from './IProvider';
 
 export class ClaudeProvider implements IProvider {
@@ -17,18 +19,19 @@ export class ClaudeProvider implements IProvider {
       : path.join(projectRoot,  '.claude', 'skills');
   }
 
-  install(pkg: ApmPackage, pkgLocalPath: string, installPath: string): void {
-    getComponent(pkg.type).copyTo(pkgLocalPath, bareSkillName(pkg.name), installPath);
+  install(pkg: ApmPackage, repo: IRepository, source: ApmSource, component: IComponentOps, installPath: string, cacheDir: string, projectRoot: string): void {
+    const localPath = repo.getLocalPath(pkg, source, cacheDir, projectRoot);
+    component.copyTo(localPath, bareSkillName(pkg.name), installPath);
   }
 
-  uninstall(name: string, type: PackageType, installPath: string): void {
-    getComponent(type).removeFrom(bareSkillName(name), installPath);
+  uninstall(name: string, component: IComponentOps, installPath: string): void {
+    component.removeFrom(bareSkillName(name), installPath);
   }
 
-  listInstalled(installPath: string, type: PackageType, sourceMap: Map<string, string>): InstalledPackage[] {
-    return getComponent(type).listFrom(installPath, sourceMap).map(e => ({
+  listInstalled(installPath: string, component: IComponentOps, sourceMap: Map<string, string>): InstalledPackage[] {
+    return component.listFrom(installPath, sourceMap).map(e => ({
       name:          e.name,
-      type,
+      type:          component.type,
       provider:      Provider.CLAUDE,
       scope:         Scope.LOCAL,
       installPath:   e.installPath,
@@ -47,7 +50,7 @@ export class ClaudeProvider implements IProvider {
       text = text.replace(/"\.\.\/\.claude\/skills\//g, '"');
       fs.writeFileSync(path.join(installPath, 'manifest.json'), text, 'utf-8');
     } catch {
-      // manifest.json is best-effort — don't fail the install.
+      // manifest.json is best-effort
     }
   }
 }

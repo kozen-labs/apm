@@ -3,8 +3,8 @@ import path from 'path';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
 import { PackageType, inferGroup } from '../../models/provider.model';
+import { IComponentScanner } from '../../models/component.model';
 import { IRepository } from './IRepository';
-import { getComponent, hasComponent } from '../PluginRegistry';
 
 const DEFAULT_SKILLS_PATH = path.join('.agents', 'skills');
 const DEFAULT_AGENTS_PATH = path.join('.agents', 'agents');
@@ -12,20 +12,22 @@ const DEFAULT_AGENTS_PATH = path.join('.agents', 'agents');
 export class LocalRepository implements IRepository {
   readonly type = 'local';
 
-  list(source: ApmSource, _cacheDir: string, projectRoot: string): ApmPackage[] {
+  list(source: ApmSource, _cacheDir: string, projectRoot: string, component: IComponentScanner): ApmPackage[] {
     const sourceRoot = this.resolveRoot(source, projectRoot);
     if (source.singleResource) {
-      return this.scanSingle(source, sourceRoot);
+      return this.scanSingle(source, sourceRoot, component);
     }
     const skills = this.scanDir(
       path.join(sourceRoot, source.skillsPath ?? DEFAULT_SKILLS_PATH),
       PackageType.SKILL,
       source,
+      component,
     );
     const agents = this.scanDir(
       path.join(sourceRoot, source.agentsPath ?? DEFAULT_AGENTS_PATH),
       PackageType.AGENT,
       source,
+      component,
     );
     return [...skills, ...agents];
   }
@@ -48,39 +50,35 @@ export class LocalRepository implements IRepository {
     return path.resolve(projectRoot, source.path ?? '.');
   }
 
-  private scanDir(dir: string, type: PackageType, source: ApmSource): ApmPackage[] {
-    if (!fs.existsSync(dir)) return [];
+  private scanDir(dir: string, type: PackageType, source: ApmSource, component: IComponentScanner): ApmPackage[] {
+    if (!fs.existsSync(dir) || component.type !== type) return [];
     const pkgs: ApmPackage[] = [];
 
-    if (hasComponent(type)) {
-      const component = getComponent(type);
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (!component.matchEntry(entry, dir)) continue;
-        const entryPath = path.join(dir, entry.name);
-        const meta      = component.readMeta(entryPath, entry.name);
-        const baseName  = (meta as { _baseName?: string })._baseName ?? entry.name;
-        pkgs.push({
-          name:        this.withNs(source.namespace, baseName),
-          path:        entry.name,
-          type,
-          description: String(meta.description ?? ''),
-          group:       inferGroup(baseName),
-          created:     String(meta.created  ?? ''),
-          updated:     String(meta.updated  ?? ''),
-          version:     String(meta.version  ?? ''),
-          sourceRef:   source.name,
-          localPath:   entryPath,
-        });
-      }
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!component.matchEntry(entry, dir)) continue;
+      const entryPath = path.join(dir, entry.name);
+      const meta      = component.readMeta(entryPath, entry.name);
+      const baseName  = (meta as { _baseName?: string })._baseName ?? entry.name;
+      pkgs.push({
+        name:        this.withNs(source.namespace, baseName),
+        path:        entry.name,
+        type,
+        description: String(meta.description ?? ''),
+        group:       inferGroup(baseName),
+        created:     String(meta.created  ?? ''),
+        updated:     String(meta.updated  ?? ''),
+        version:     String(meta.version  ?? ''),
+        sourceRef:   source.name,
+        localPath:   entryPath,
+      });
     }
     return pkgs.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private scanSingle(source: ApmSource, sourceRoot: string): ApmPackage[] {
-    if (!hasComponent(PackageType.SKILL)) return [];
-    const component = getComponent(PackageType.SKILL);
-    const name      = this.withNs(source.namespace, source.resourceName ?? source.name);
-    const meta      = component.readMeta(sourceRoot, source.resourceName ?? source.name);
+  private scanSingle(source: ApmSource, sourceRoot: string, component: IComponentScanner): ApmPackage[] {
+    if (component.type !== PackageType.SKILL) return [];
+    const name = this.withNs(source.namespace, source.resourceName ?? source.name);
+    const meta = component.readMeta(sourceRoot, source.resourceName ?? source.name);
     return [{
       name,
       path:        '.',

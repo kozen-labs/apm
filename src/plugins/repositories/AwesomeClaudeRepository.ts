@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
 import { PackageType, inferGroup } from '../../models/provider.model';
+import { IComponentScanner } from '../../models/component.model';
 import { IRepository } from './IRepository';
 import { GitHubRepository } from './GitHubRepository';
 
@@ -26,7 +27,7 @@ export class AwesomeClaudeRepository implements IRepository {
 
   private github = new GitHubRepository();
 
-  list(source: ApmSource, cacheDir: string, _projectRoot: string): ApmPackage[] {
+  list(source: ApmSource, cacheDir: string, _projectRoot: string, _component?: IComponentScanner): ApmPackage[] {
     const catalog = this.loadCatalog(source, cacheDir);
     return catalog.map(entry => this.toPackage(entry, source));
   }

@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
 import { PackageType, inferGroup } from '../../models/provider.model';
+import { IComponentScanner } from '../../models/component.model';
 import { IRepository } from './IRepository';
 import { parseFrontmatter } from '../../utils/frontmatter';
 
@@ -13,7 +14,7 @@ const STALE_MS = 24 * 60 * 60 * 1000; // 24 h
 export class SkillsShRepository implements IRepository {
   readonly type = 'skills-sh';
 
-  list(source: ApmSource, cacheDir: string, _projectRoot: string): ApmPackage[] {
+  list(source: ApmSource, cacheDir: string, _projectRoot: string, _component?: IComponentScanner): ApmPackage[] {
     const repoDir = this.repoDir(source, cacheDir);
     if (!fs.existsSync(repoDir)) this.clone(source, repoDir);
     return this.discover(source, repoDir, cacheDir);

@@ -4,6 +4,7 @@ import os from 'os';
 import { execSync } from 'child_process';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
+import { IComponentScanner } from '../../models/component.model';
 import { IRepository } from './IRepository';
 import { LocalRepository } from './LocalRepository';
 
@@ -14,10 +15,10 @@ export class GitHubRepository implements IRepository {
 
   private local = new LocalRepository();
 
-  list(source: ApmSource, cacheDir: string, _projectRoot: string): ApmPackage[] {
+  list(source: ApmSource, cacheDir: string, _projectRoot: string, component: IComponentScanner): ApmPackage[] {
     const repoDir = this.getRepoDir(source, cacheDir);
     if (!fs.existsSync(repoDir)) this.clone(source, repoDir);
-    return this.local.list(this.toCacheSource(source, repoDir), cacheDir, repoDir);
+    return this.local.list(this.toCacheSource(source, repoDir), cacheDir, repoDir, component);
   }
 
   getLocalPath(pkg: ApmPackage, source: ApmSource, cacheDir: string, _projectRoot: string): string {

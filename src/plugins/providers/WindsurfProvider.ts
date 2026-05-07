@@ -3,8 +3,11 @@ import path from 'path';
 import os from 'os';
 import { ApmPackage, InstalledPackage } from '../../models/package.model';
 import { PackageType, Provider, Scope } from '../../models/provider.model';
+import { ApmSource } from '../../models/config.model';
+import { IComponentOps } from '../../models/component.model';
 import { parseFrontmatter, stripFrontmatter } from '../../utils/frontmatter';
 import { bareSkillName } from '../../utils/pkg';
+import { IRepository } from '../repositories/IRepository';
 import { IProvider } from './IProvider';
 
 export class WindsurfProvider implements IProvider {
@@ -17,16 +20,15 @@ export class WindsurfProvider implements IProvider {
       : path.join(projectRoot, '.windsurf', 'rules');
   }
 
-  install(pkg: ApmPackage, pkgLocalPath: string, installPath: string): void {
+  install(pkg: ApmPackage, repo: IRepository, source: ApmSource, _component: IComponentOps, installPath: string, cacheDir: string, projectRoot: string): void {
     if (pkg.type === PackageType.AGENT) return;
 
-    const skillMd = path.join(pkgLocalPath, 'SKILL.md');
-    if (!fs.existsSync(skillMd)) {
-      throw new Error(`SKILL.md not found at ${skillMd}`);
-    }
+    const localPath = repo.getLocalPath(pkg, source, cacheDir, projectRoot);
+    const skillMd   = path.join(localPath, 'SKILL.md');
+    if (!fs.existsSync(skillMd)) throw new Error(`SKILL.md not found at ${skillMd}`);
 
-    const body = stripFrontmatter(skillMd);
-    const desc = pkg.description.replace(/"/g, "'").replace(/\n/g, ' ').trim().slice(0, 120);
+    const body    = stripFrontmatter(skillMd);
+    const desc    = pkg.description.replace(/"/g, "'").replace(/\n/g, ' ').trim().slice(0, 120);
     const content = `---\ndescription: "${desc}"\nupdated: "${pkg.updated}"\n---\n\n${body}`;
     fs.writeFileSync(
       path.join(installPath, `${bareSkillName(pkg.name)}.windsurfrules`),
@@ -35,16 +37,14 @@ export class WindsurfProvider implements IProvider {
     );
   }
 
-  uninstall(name: string, _type: PackageType, installPath: string): void {
+  uninstall(name: string, _component: IComponentOps, installPath: string): void {
     const p = path.join(installPath, `${bareSkillName(name)}.windsurfrules`);
-    if (!fs.existsSync(p)) {
-      throw Object.assign(new Error(`Not found: ${p}`), { code: 'ENOENT' });
-    }
+    if (!fs.existsSync(p)) throw Object.assign(new Error(`Not found: ${p}`), { code: 'ENOENT' });
     fs.rmSync(p, { force: true });
   }
 
-  listInstalled(installPath: string, type: PackageType, sourceMap: Map<string, string>): InstalledPackage[] {
-    if (!fs.existsSync(installPath) || type === PackageType.AGENT) return [];
+  listInstalled(installPath: string, component: IComponentOps, sourceMap: Map<string, string>): InstalledPackage[] {
+    if (!fs.existsSync(installPath) || component.type === PackageType.AGENT) return [];
     const out: InstalledPackage[] = [];
 
     for (const f of fs.readdirSync(installPath)) {
@@ -54,7 +54,7 @@ export class WindsurfProvider implements IProvider {
       const installedUpdated = String(fm.updated ?? '');
       const sourceUpdated    = sourceMap.get(name) ?? '';
       out.push({
-        name, type,
+        name, type: component.type,
         provider:     Provider.WINDSURF,
         scope:        Scope.LOCAL,
         installPath:  path.join(installPath, f),

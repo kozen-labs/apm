@@ -3,6 +3,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { ApmPackage } from '../../models/package.model';
 import { ApmSource } from '../../models/config.model';
+import { IComponentScanner } from '../../models/component.model';
 import { IRepository } from './IRepository';
 import { LocalRepository } from './LocalRepository';
 
@@ -11,9 +12,9 @@ export class NpmRepository implements IRepository {
 
   private local = new LocalRepository();
 
-  list(source: ApmSource, cacheDir: string, _projectRoot: string): ApmPackage[] {
+  list(source: ApmSource, cacheDir: string, _projectRoot: string, component: IComponentScanner): ApmPackage[] {
     const pkgDir = this.ensureInstalled(source, cacheDir);
-    return this.local.list(this.toLocalSource(source, pkgDir), cacheDir, pkgDir);
+    return this.local.list(this.toLocalSource(source, pkgDir), cacheDir, pkgDir, component);
   }
 
   getLocalPath(pkg: ApmPackage, source: ApmSource, cacheDir: string, _projectRoot: string): string {

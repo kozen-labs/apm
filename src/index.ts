@@ -1,7 +1,6 @@
 import fs                               from 'fs';
 import path                            from 'path';
 import { KzModule, IConfig, IDependency } from '@kozen/engine';
-import { bootstrap }      from './plugins/bootstrap';
 import { findProjectRoot } from './utils/system';
 import iocJson             from './configs/ioc.json';
 import cliJson             from './configs/cli.json';
@@ -32,8 +31,6 @@ export class ApmModule extends KzModule {
     opts?:  unknown,
   ): Promise<Record<string, IDependency> | null> {
 
-    bootstrap();
-
     const projectRoot: string =
       (opts  as Record<string, unknown>)?.projectRoot as string ??
       (config as Record<string, unknown>)?.projectRoot as string ??
@@ -63,8 +60,7 @@ export default ApmModule;
 export { ApmManifestManager } from './services/manifest';
 export { ApmConfigManager }   from './services/config';
 export { ApmLockManager }     from './services/lock';
-export { bootstrap }          from './plugins/bootstrap';
-export * as PluginRegistry    from './plugins/PluginRegistry';
+export { type IComponentOps } from './models/component.model';
 
 // ── Plugin interfaces ──────────────────────────────────────────────────────
 export { type IRepository } from './plugins/repositories/IRepository';

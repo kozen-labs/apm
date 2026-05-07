@@ -4,28 +4,40 @@
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/components",
-    "dependencies": []
+    "dependencies": [
+      { "key": "assistant", "target": "assistant", "type": "ref" },
+      { "key": "logger",    "target": "core:logger", "type": "ref" }
+    ]
   },
   "apm:plugin:component:agent": {
     "target":       "Agent",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/components",
-    "dependencies": []
+    "dependencies": [
+      { "key": "assistant", "target": "assistant", "type": "ref" },
+      { "key": "logger",    "target": "core:logger", "type": "ref" }
+    ]
   },
   "apm:plugin:component:hook": {
     "target":       "Hook",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/components",
-    "dependencies": []
+    "dependencies": [
+      { "key": "assistant", "target": "assistant", "type": "ref" },
+      { "key": "logger",    "target": "core:logger", "type": "ref" }
+    ]
   },
   "apm:plugin:component:context": {
     "target":       "Context",
     "type":         "class",
     "lifetime":     "singleton",
     "path":         "../plugins/components",
-    "dependencies": []
+    "dependencies": [
+      { "key": "assistant", "target": "assistant", "type": "ref" },
+      { "key": "logger",    "target": "core:logger", "type": "ref" }
+    ]
   },
 
   "apm:plugin:provider:standard": {

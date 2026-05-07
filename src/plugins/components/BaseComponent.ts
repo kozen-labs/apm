@@ -1,6 +1,7 @@
 import fs   from 'fs';
 import path from 'path';
 import os   from 'os';
+import { BaseService } from '@kozen/engine';
 import { ApmPackage, ApmManifest, InstalledMeta, InstalledPackage, OperationResult } from '../../models/package.model';
 import { PackageType, Provider, Scope } from '../../models/provider.model';
 import {
@@ -12,28 +13,23 @@ import {
 import { ApmConfigManager }   from '../../services/config';
 import { ApmLockManager }     from '../../services/lock';
 import { ApmManifestManager } from '../../services/manifest';
-import * as PluginRegistry    from '../PluginRegistry';
-import * as log               from '../../utils/log';
-import { bareSkillName }      from '../../utils/pkg';
+import { IProvider }          from '../providers/IProvider';
+import { IRepository }        from '../repositories/IRepository';
 import { IComponent }         from './IComponent';
+import { bareSkillName }      from '../../utils/pkg';
 
 const DEFAULT_CACHE_DIR = path.join(os.homedir(), 'apm.cache');
-const CONFIG_FILE = 'apm.pack.json';
-const LOCK_FILE   = 'apm.lock.json';
 
 /**
- * BaseComponent — orchestrates between repository (where to get) and
- * provider (where/how to install). Subclasses override only the type-specific
- * file operations: matchEntry, readMeta, copyTo, removeFrom, listFrom.
+ * BaseComponent — orchestrates repository (source) → provider (destination) for one artifact type.
  *
- * Flow:
- *   install()  → fetchAvailable() [repository] → provider.install() per package
- *   uninstall()→ provider.uninstall() per name
- *   list()     → fetchAvailable() [repository]
- *   status()   → fetchInstalled() [all providers]
- *   outdated() → fetchInstalled() filtered
+ * Subclasses implement the type-specific file operations: matchEntry, readMeta,
+ * copyTo, removeFrom, listFrom. All shared action logic lives here.
+ *
+ * IoC injection: assistant (IIoC) resolves providers and repositories by token at runtime.
+ * No static registries — providers and repositories are resolved from the IoC container.
  */
-export abstract class BaseComponent implements IComponent {
+export abstract class BaseComponent extends BaseService implements IComponent {
 
   abstract readonly type:          PackageType;
   abstract readonly installSubdir: string;
@@ -48,189 +44,146 @@ export abstract class BaseComponent implements IComponent {
 
   install(opts: ComponentInstallOpts): OperationResult {
     const config    = new ApmConfigManager(opts.projectRoot);
-    const provider  = PluginRegistry.getProvider(opts.provider);
+    const provider  = this.assistant!.resolveSync<IProvider>(`apm:plugin:provider:${opts.provider}`);
     const target    = provider.getInstallPath(opts.scope, opts.projectRoot, opts.customDir);
-    const available = this.fetchAvailable(config, opts.projectRoot);
-
+    const available = this.listAvailable(config, opts.projectRoot);
     const toInstall = opts.names.length
       ? available.filter(p => opts.names.includes(p.name))
       : available;
 
-    const missing = opts.names.filter(n => !available.find(p => p.name === n));
-    for (const m of missing) log.warn(`${this.type} not found in source registry: ${m}`);
-
+    for (const n of opts.names.filter(n => !available.find(p => p.name === n))) {
+      this.logger?.warn({ src: 'BaseComponent', message: `${this.type} not found in source registry: ${n}` });
+    }
     if (!toInstall.length) {
-      log.error(`No matching ${this.type}s found. Run 'apm list --component ${this.type}' to see available packages.`);
+      this.logger?.error({ src: 'BaseComponent', message: `No matching ${this.type}s found` });
       process.exit(1);
     }
 
-    this.guardSourceOverwrite(toInstall, target, config, opts.projectRoot);
     fs.mkdirSync(target, { recursive: true });
-
-    const result = this.emptyResult(target);
+    const result = emptyResult(target);
     const t0     = performance.now();
-
-    log.section(`Installing ${toInstall.length} ${this.type}(s)`);
-    log.info(`Target: ${target}`);
-    console.log();
+    const allSources = config.getAllSources();
 
     for (const pkg of toInstall) {
+      const source = allSources.find(s => s.name === pkg.sourceRef) ?? allSources.find(s => s.type === 'local');
       try {
-        const localPath = this.resolveLocalPath(pkg, config, opts.projectRoot);
-        provider.install(pkg, localPath, target);
-        log.ok(pkg.name);
+        const repo = this.assistant!.resolveSync<IRepository>(`apm:plugin:repository:${source!.type}`);
+        provider.install(pkg, repo, source!, this, target, DEFAULT_CACHE_DIR, opts.projectRoot);
+        this.logger?.info({ src: 'BaseComponent', message: `installed ${pkg.name}` });
         result.succeeded.push(pkg.name);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        log.error(`${pkg.name}  →  ${msg}`);
+        this.logger?.error({ src: 'BaseComponent', message: `${pkg.name}: ${msg}` });
         result.errors.push([pkg.name, msg]);
       }
     }
 
     try {
       provider.postInstall(target, config.getPrimarySourceRoot());
-      if (opts.provider === Provider.CLAUDE) log.ok('manifest.json written');
     } catch (err) {
-      log.warn(`postInstall skipped: ${err}`);
+      this.logger?.warn({ src: 'BaseComponent', message: `postInstall skipped: ${err}` });
     }
 
     result.elapsed = (performance.now() - t0) / 1000;
-    log.summary(result.succeeded, result.skipped, result.errors, result.elapsed, result.target);
-
-    if (result.succeeded.length) {
-      try {
-        const installed = this.fetchInstalled(config, opts.projectRoot)
-          .filter(p => p.provider === opts.provider && p.scope === opts.scope);
-        new ApmLockManager(opts.projectRoot).mergeForTarget(installed, opts.provider, opts.scope);
-      } catch { /* lock update is best-effort */ }
-    }
-
+    this.syncLockAfterInstall(result, opts, config);
     return result;
   }
 
   uninstall(opts: ComponentInstallOpts): OperationResult {
     const config   = new ApmConfigManager(opts.projectRoot);
-    const provider = PluginRegistry.getProvider(opts.provider);
+    const provider = this.assistant!.resolveSync<IProvider>(`apm:plugin:provider:${opts.provider}`);
     const target   = provider.getInstallPath(opts.scope, opts.projectRoot, opts.customDir);
+    const names    = opts.names.length
+      ? opts.names
+      : this.listInstalled(config, opts.projectRoot)
+          .filter(p => p.provider === opts.provider && p.scope === opts.scope)
+          .map(p => p.name);
 
-    let names = opts.names;
     if (!names.length) {
-      names = this.fetchInstalled(config, opts.projectRoot)
-        .filter(p => p.provider === opts.provider && p.scope === opts.scope)
-        .map(p => p.name);
-
-      if (!names.length) {
-        log.info(`Nothing installed at ${opts.provider}/${opts.scope}.`);
-        return this.emptyResult(target);
-      }
+      this.logger?.info({ src: 'BaseComponent', message: `Nothing installed at ${opts.provider}/${opts.scope}` });
+      return emptyResult(target);
     }
-
-    const result = this.emptyResult(target);
-    const t0     = performance.now();
-
-    log.section(`Uninstalling ${names.length} ${this.type}(s)`);
-    log.info(`Target: ${target}`);
-    console.log();
-
     if (!fs.existsSync(target)) {
-      log.warn(`Install path does not exist: ${target}`);
-      result.elapsed = (performance.now() - t0) / 1000;
-      return result;
+      this.logger?.warn({ src: 'BaseComponent', message: `Install path does not exist: ${target}` });
+      return emptyResult(target);
     }
+
+    const result = emptyResult(target);
+    const t0     = performance.now();
 
     for (const name of names) {
       try {
-        provider.uninstall(name, this.type, target);
-        log.ok(`removed  ${name}`);
+        provider.uninstall(name, this, target);
+        this.logger?.info({ src: 'BaseComponent', message: `removed ${name}` });
         result.succeeded.push(name);
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-          log.skip(`${name}  (not found)`);
           result.skipped.push(name);
         } else {
           const msg = err instanceof Error ? err.message : String(err);
-          log.error(`${name}  →  ${msg}`);
+          this.logger?.error({ src: 'BaseComponent', message: `${name}: ${msg}` });
           result.errors.push([name, msg]);
         }
       }
     }
 
     result.elapsed = (performance.now() - t0) / 1000;
-    log.summary(result.succeeded, result.skipped, result.errors, result.elapsed, result.target);
-
     if (result.succeeded.length) {
-      try {
-        new ApmLockManager(opts.projectRoot).removeEntries(result.succeeded, opts.provider, opts.scope);
-      } catch { /* lock update is best-effort */ }
+      try { new ApmLockManager(opts.projectRoot).removeEntries(result.succeeded, opts.provider, opts.scope); }
+      catch { /* best-effort */ }
     }
-
     return result;
   }
 
   list(opts: ComponentBaseOpts): ApmPackage[] {
-    return this.fetchAvailable(new ApmConfigManager(opts.projectRoot), opts.projectRoot);
+    return this.listAvailable(new ApmConfigManager(opts.projectRoot), opts.projectRoot);
   }
 
   status(opts: ComponentBaseOpts): InstalledPackage[] {
     const config    = new ApmConfigManager(opts.projectRoot);
-    const installed = this.fetchInstalled(config, opts.projectRoot);
+    const installed = this.listInstalled(config, opts.projectRoot);
     if (installed.length) new ApmLockManager(opts.projectRoot).writeAll(installed);
     return installed;
   }
 
   outdated(opts: ComponentBaseOpts): InstalledPackage[] {
     const config    = new ApmConfigManager(opts.projectRoot);
-    const installed = this.fetchInstalled(config, opts.projectRoot);
+    const installed = this.listInstalled(config, opts.projectRoot);
     if (installed.length) new ApmLockManager(opts.projectRoot).writeAll(installed);
     return installed.filter(p => p.isOutdated);
   }
 
   setup(opts: ComponentSetupOpts): void {
-    log.section('APM — Initialize project');
-
     const configManager = new ApmConfigManager(opts.projectRoot, opts.configPath);
     const lockManager   = new ApmLockManager(opts.projectRoot);
-    const configExists  = configManager.read() !== null;
 
-    if (configExists && !opts.force) {
-      log.skip(`${CONFIG_FILE} already exists  (use --force to overwrite)`);
+    if (configManager.read() !== null && !opts.force) {
+      this.logger?.info({ src: 'BaseComponent', message: 'apm.pack.json already exists (use --force to overwrite)' });
     } else {
       const config = configManager.getOrCreate();
       config.defaultProvider = opts.provider;
       config.defaultScope    = opts.scope;
-
       if (opts.enableCommunity) {
         for (const s of config.sources) {
           if (s.type === 'github') s.enabled = true;
         }
       }
-
       configManager.write(config);
-      log.ok(`${CONFIG_FILE} written  (${configManager.getConfigPath()})`);
-      if (opts.enableCommunity) log.detail('Community sources enabled. Run `apm refresh` to clone them.');
+      this.logger?.info({ src: 'BaseComponent', message: `apm.pack.json written (${configManager.getConfigPath()})` });
     }
 
-    const lockExists = lockManager.read() !== null;
-    if (lockExists && !opts.force) {
-      log.skip(`${LOCK_FILE} already exists`);
-    } else {
+    if (lockManager.read() === null || opts.force) {
       lockManager.writeAll([]);
-      log.ok(`${LOCK_FILE} written  (empty — run \`apm status\` to populate)`);
+      this.logger?.info({ src: 'BaseComponent', message: 'apm.lock.json written' });
     }
 
     if (fs.existsSync(path.join(opts.projectRoot, '.agents'))) {
-      const manifestManager = new ApmManifestManager(
-        new ApmConfigManager(opts.projectRoot).getPrimarySourceRoot(),
-      );
+      const manifestManager = new ApmManifestManager(new ApmConfigManager(opts.projectRoot).getPrimarySourceRoot());
       const manifest = manifestManager.generate();
       manifestManager.write(manifest);
       const { skills, agents } = manifest.packages;
-      log.ok(`.agents/apm.json written — ${skills.length} skills, ${agents.length} agents`);
+      this.logger?.info({ src: 'BaseComponent', message: `.agents/apm.json written — ${skills.length} skills, ${agents.length} agents` });
     }
-
-    console.log();
-    log.detail(`Edit ${CONFIG_FILE} to add or enable sources, then run \`apm list\` to see available packages.`);
-    console.log();
   }
 
   manifest(opts: ComponentBaseOpts): ApmManifest {
@@ -242,108 +195,58 @@ export abstract class BaseComponent implements IComponent {
   }
 
   refresh(opts: ComponentRefreshOpts): void {
-    const config     = new ApmConfigManager(opts.projectRoot);
-    const allSources = config.getAllSources();
+    const config  = new ApmConfigManager(opts.projectRoot);
+    const sources = opts.sourceName
+      ? config.getAllSources().filter(s => s.name === opts.sourceName)
+      : config.getAllSources().filter(s => s.type !== 'local');
 
-    const targets = opts.sourceName
-      ? allSources.filter(s => s.name === opts.sourceName)
-      : allSources.filter(s => s.type !== 'local');
-
-    if (opts.sourceName && targets.length === 0) {
-      log.error(`Source "${opts.sourceName}" not found in ${CONFIG_FILE}`);
+    if (opts.sourceName && sources.length === 0) {
+      this.logger?.error({ src: 'BaseComponent', message: `Source "${opts.sourceName}" not found` });
       process.exit(1);
     }
 
-    if (targets.length === 0) {
-      log.info('No remote sources configured. Nothing to refresh.');
-      return;
-    }
-
-    for (const source of targets) {
-      if (!PluginRegistry.hasRepository(source.type)) {
-        log.warn(`No repository registered for source type "${source.type}" — skipping "${source.name}"`);
-        continue;
-      }
-      log.info(`Refreshing "${source.name}" (${source.url ?? source.path ?? source.type})…`);
+    for (const source of sources) {
       try {
-        PluginRegistry.getRepository(source.type).refresh(source, DEFAULT_CACHE_DIR);
-        log.ok(source.name);
+        const repo = this.assistant!.resolveSync<IRepository>(`apm:plugin:repository:${source.type}`);
+        repo.refresh(source, DEFAULT_CACHE_DIR);
+        this.logger?.info({ src: 'BaseComponent', message: `refreshed: ${source.name}` });
       } catch (err) {
-        log.error(`${source.name}: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger?.warn({ src: 'BaseComponent', message: `${source.name}: ${err instanceof Error ? err.message : String(err)}` });
       }
     }
-    console.log();
   }
 
   // ── private ───────────────────────────────────────────────────────────────
 
-  private fetchAvailable(config: ApmConfigManager, projectRoot: string): ApmPackage[] {
-    const sources = config.getEnabledSources();
-
-    if (sources.length === 1 && sources[0].type === 'local') {
-      const manager  = new ApmManifestManager(config.getPrimarySourceRoot());
-      const manifest = manager.read() ?? manager.generate();
-      return this.filterByType([...manifest.packages.skills, ...(manifest.packages.agents ?? [])]);
-    }
-
+  private listAvailable(config: ApmConfigManager, projectRoot: string): ApmPackage[] {
     const all: ApmPackage[] = [];
-    for (const source of sources) {
-      if (!PluginRegistry.hasRepository(source.type)) continue;
+    for (const source of config.getEnabledSources()) {
       try {
-        const pkgs = PluginRegistry.getRepository(source.type).list(source, DEFAULT_CACHE_DIR, projectRoot);
-        all.push(...pkgs);
-      } catch (err) {
-        console.warn(`  [warn] Failed to list source "${source.name}": ${String(err)}`);
-      }
+        const repo = this.assistant!.resolveSync<IRepository>(`apm:plugin:repository:${source.type}`);
+        all.push(...repo.list(source, DEFAULT_CACHE_DIR, projectRoot, this));
+      } catch { /* skip unregistered or unavailable sources */ }
     }
-    return this.filterByType(all);
+    return all.filter(p => p.type === this.type);
   }
 
-  private fetchInstalled(config: ApmConfigManager, projectRoot: string): InstalledPackage[] {
-    const available   = this.fetchAvailable(config, projectRoot);
+  private listInstalled(config: ApmConfigManager, projectRoot: string): InstalledPackage[] {
+    const available   = this.listAvailable(config, projectRoot);
     const sourceMap   = new Map(available.map(p => [bareSkillName(p.name), p.updated]));
     const sourcePaths = this.getSourcePaths(config, projectRoot);
     const installed: InstalledPackage[] = [];
 
-    for (const providerName of PluginRegistry.listProviderNames()) {
-      const provider = PluginRegistry.getProvider(providerName);
-      for (const scope of [Scope.LOCAL, Scope.GLOBAL]) {
-        const installPath = provider.getInstallPath(scope, projectRoot);
-        if (!fs.existsSync(installPath)) continue;
-        if (sourcePaths.has(path.resolve(installPath))) continue;
-
-        const pkgs = provider.listInstalled(installPath, this.type, sourceMap);
-        for (const pkg of pkgs) installed.push({ ...pkg, scope });
-      }
+    for (const providerName of Object.values(Provider)) {
+      try {
+        const provider = this.assistant!.resolveSync<IProvider>(`apm:plugin:provider:${providerName}`);
+        for (const scope of [Scope.LOCAL, Scope.GLOBAL]) {
+          const installPath = provider.getInstallPath(scope, projectRoot);
+          if (!fs.existsSync(installPath) || sourcePaths.has(path.resolve(installPath))) continue;
+          const pkgs = provider.listInstalled(installPath, this, sourceMap);
+          for (const pkg of pkgs) installed.push({ ...pkg, scope });
+        }
+      } catch { /* skip unregistered providers */ }
     }
     return installed;
-  }
-
-  private resolveLocalPath(pkg: ApmPackage, config: ApmConfigManager, projectRoot: string): string {
-    if (pkg.localPath) return pkg.localPath;
-
-    const all    = config.getAllSources();
-    const source = (pkg.sourceRef ? all.find(s => s.name === pkg.sourceRef) : null)
-                ?? all.find(s => s.type === 'local');
-
-    if (!source) {
-      return path.resolve(config.getPrimarySourceRoot(), '.agents', pkg.path);
-    }
-    return PluginRegistry.getRepository(source.type).getLocalPath(pkg, source, DEFAULT_CACHE_DIR, projectRoot);
-  }
-
-  private guardSourceOverwrite(packages: ApmPackage[], target: string, config: ApmConfigManager, projectRoot: string): void {
-    for (const pkg of packages) {
-      try {
-        const localPath = this.resolveLocalPath(pkg, config, projectRoot);
-        if (path.resolve(target) === path.resolve(path.dirname(localPath))) {
-          log.warn(
-            `Install target "${target}" appears to be the source directory for "${pkg.name}". ` +
-            'Copies may overwrite the source.',
-          );
-        }
-      } catch { /* ignore resolution errors during guard */ }
-    }
   }
 
   private getSourcePaths(config: ApmConfigManager, projectRoot: string): Set<string> {
@@ -361,11 +264,16 @@ export abstract class BaseComponent implements IComponent {
     return new Set(paths.map(p => path.resolve(p)));
   }
 
-  private filterByType(pkgs: ApmPackage[]): ApmPackage[] {
-    return pkgs.filter(p => p.type === this.type);
+  private syncLockAfterInstall(result: OperationResult, opts: ComponentInstallOpts, config: ApmConfigManager): void {
+    if (!result.succeeded.length) return;
+    try {
+      const installed = this.listInstalled(config, opts.projectRoot)
+        .filter(p => p.provider === opts.provider && p.scope === opts.scope);
+      new ApmLockManager(opts.projectRoot).mergeForTarget(installed, opts.provider, opts.scope);
+    } catch { /* best-effort */ }
   }
+}
 
-  private emptyResult(target: string): OperationResult {
-    return { succeeded: [], skipped: [], errors: [], elapsed: 0, target };
-  }
+function emptyResult(target: string): OperationResult {
+  return { succeeded: [], skipped: [], errors: [], elapsed: 0, target };
 }
