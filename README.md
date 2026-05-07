@@ -317,3 +317,4 @@ MIT
 - [Node.js](https://nodejs.org/)
 - [Karpathy Claude Code Plugin](https://www.claudepluginhub.com/plugins/forrestchang-andrej-karpathy-skills)
 - [Karpathy-Inspired Claude Code Guidelines](https://github.com/forrestchang/andrej-karpathy-skills)
+- [Multica turns coding agents into real teammates](https://github.com/multica-ai/multica)
