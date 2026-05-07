@@ -315,4 +315,5 @@ MIT
 - [Agentgateway is an open source proxy built on AI-native protocols (MCP & A2A) ](https://github.com/agentgateway/agentgateway)
 - [Skill validator](https://github.com/agent-ecosystem/skill-validator)
 - [Node.js](https://nodejs.org/)
-- [Karpathy skills pack](https://www.claudepluginhub.com/plugins/forrestchang-andrej-karpathy-skills)
+- [Karpathy Claude Code Plugin](https://www.claudepluginhub.com/plugins/forrestchang-andrej-karpathy-skills)
+- [Karpathy-Inspired Claude Code Guidelines](https://github.com/forrestchang/andrej-karpathy-skills)
