@@ -1,15 +1,21 @@
 import path from 'path';
 import os from 'os';
-import { ApmPackage, InstalledPackage } from '../../models/package.model';
-import { Provider, Scope } from '../../models/provider.model';
-import { ApmSource } from '../../models/config.model';
-import { IComponentOps } from '../../models/component.model';
+import { IApmPackage } from '../../models/IApmPackage';
+import { IInstalledPackage } from '../../models/IInstalledPackage';
+import { Provider } from '../../models/Provider';
+import { Scope } from '../../models/Scope';
+import { IApmSource } from '../../models/IApmSource';
+import { IComponentOps } from '../../models/IComponentOps';
+import { IRepository } from '../../models/IRepository';
+import { IProvider } from '../../models/IProvider';
 import { bareSkillName } from '../../utils/pkg';
-import { IRepository } from '../repositories/IRepository';
-import { IProvider } from './IProvider';
 
 export class StandardProvider implements IProvider {
-  readonly name = Provider.STANDARD;
+  readonly name: string;
+
+  constructor() {
+    this.name = Provider.STANDARD;
+  }
 
   getInstallPath(scope: Scope, projectRoot: string, customDir?: string): string {
     if (customDir) return customDir;
@@ -18,17 +24,18 @@ export class StandardProvider implements IProvider {
       : path.join(projectRoot,  '.agents', 'skills');
   }
 
-  install(pkg: ApmPackage, repo: IRepository, source: ApmSource, component: IComponentOps, installPath: string, cacheDir: string, projectRoot: string): void {
-    const localPath = repo.getLocalPath(pkg, source, cacheDir, projectRoot);
-    component.copyTo(localPath, bareSkillName(pkg.name), installPath);
+  async install(pkg: IApmPackage, repo: IRepository, source: IApmSource, component: IComponentOps, installPath: string, cacheDir: string, projectRoot: string): Promise<void> {
+    const localPath = await repo.getLocalPath(pkg, source, cacheDir, projectRoot);
+    await component.copyTo(localPath, bareSkillName(pkg.name), installPath);
   }
 
-  uninstall(name: string, component: IComponentOps, installPath: string): void {
-    component.removeFrom(bareSkillName(name), installPath);
+  async uninstall(name: string, component: IComponentOps, installPath: string): Promise<void> {
+    await component.removeFrom(bareSkillName(name), installPath);
   }
 
-  listInstalled(installPath: string, component: IComponentOps, sourceMap: Map<string, string>): InstalledPackage[] {
-    return component.listFrom(installPath, sourceMap).map(e => ({
+  async listInstalled(installPath: string, component: IComponentOps, sourceMap: Map<string, string>): Promise<IInstalledPackage[]> {
+    const entries = await component.listFrom(installPath, sourceMap);
+    return entries.map(e => ({
       name:          e.name,
       type:          component.type,
       provider:      Provider.STANDARD,
@@ -40,5 +47,5 @@ export class StandardProvider implements IProvider {
     }));
   }
 
-  postInstall(): void { /* no-op */ }
+  async postInstall(): Promise<void> { /* no-op */ }
 }

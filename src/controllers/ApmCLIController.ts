@@ -2,12 +2,14 @@ import path from 'path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { KzController, IArgs, VCategory } from '@kozen/engine';
-import { PackageType, Provider, Scope } from '../models/provider.model';
-import { InstalledPackage } from '../models/package.model';
+import { PackageType } from '../models/PackageType';
+import { Provider } from '../models/Provider';
+import { Scope } from '../models/Scope';
+import type { IInstalledPackage } from '../models/IInstalledPackage';
 import { findProjectRoot } from '../utils/system';
 import { resolveInstallPath } from '../utils/path.resolver';
 import * as log from '../utils/log';
-import type { IComponent } from '../plugins/components/IComponent';
+import type { IComponent } from '../models/IComponent';
 
 /**
  * ApmCLIController — thin dispatcher that resolves the IComponent plugin for the
@@ -99,7 +101,7 @@ export class ApmCLIController extends KzController {
 
     for (const type of this.getComponentTypes()) {
       const p = await this.plugin(type);
-      p.install({ projectRoot, provider, scope, names, customDir });
+      await p.install({ projectRoot, provider, scope, names, customDir });
     }
   }
 
@@ -119,7 +121,7 @@ export class ApmCLIController extends KzController {
 
     for (const type of this.getComponentTypes()) {
       const p = await this.plugin(type);
-      p.uninstall({ projectRoot, provider, scope, names, customDir });
+      await p.uninstall({ projectRoot, provider, scope, names, customDir });
     }
   }
 
@@ -128,10 +130,10 @@ export class ApmCLIController extends KzController {
 
     for (const type of this.getComponentTypes()) {
       const p        = await this.plugin(type);
-      const packages = p.list({ projectRoot });
+      const packages = await p.list({ projectRoot });
 
       log.section(`Available ${type}s  (${packages.length} total)`);
-      for (const [group, members] of Object.entries(groupBy(packages, p => p.group)).sort()) {
+      for (const [group, members] of Object.entries(groupBy(packages, pkg => pkg.group)).sort()) {
         console.log(`\n  ${chalk.bold(group)}  (${members.length})`);
         for (const pkg of members) {
           const upd   = pkg.updated ? `  ${chalk.dim(`updated ${pkg.updated}`)}` : '';
@@ -147,11 +149,11 @@ export class ApmCLIController extends KzController {
 
   public async status(): Promise<void> {
     const projectRoot  = await this.getProjectRoot();
-    const allInstalled: InstalledPackage[] = [];
+    const allInstalled: IInstalledPackage[] = [];
 
     for (const type of this.getComponentTypes()) {
       const p         = await this.plugin(type);
-      const installed = p.status({ projectRoot });
+      const installed = await p.status({ projectRoot });
       allInstalled.push(...installed);
 
       if (!installed.length) {
@@ -161,7 +163,7 @@ export class ApmCLIController extends KzController {
       }
 
       log.section(`Installed ${type}s  (${installed.length} total)`);
-      for (const [key, members] of Object.entries(groupBy(installed, p => `${p.provider}/${p.scope}`)).sort()) {
+      for (const [key, members] of Object.entries(groupBy(installed, pkg => `${pkg.provider}/${pkg.scope}`)).sort()) {
         const [provider, scope] = key.split('/') as [Provider, Scope];
         const installPath = resolveInstallPath(provider, scope, projectRoot, type === PackageType.AGENT ? 'agent' : 'skill');
         console.log(`\n  ${chalk.bold(provider.toUpperCase())} / ${scope}  →  ${chalk.dim(installPath)}`);
@@ -181,11 +183,11 @@ export class ApmCLIController extends KzController {
   public async outdated(): Promise<void> {
     const projectRoot  = await this.getProjectRoot();
     let   foundAny     = false;
-    const allInstalled: InstalledPackage[] = [];
+    const allInstalled: IInstalledPackage[] = [];
 
     for (const type of this.getComponentTypes()) {
       const p     = await this.plugin(type);
-      const stale = p.outdated({ projectRoot });
+      const stale = await p.outdated({ projectRoot });
       allInstalled.push(...stale);
       if (!stale.length) continue;
 
@@ -241,14 +243,14 @@ export class ApmCLIController extends KzController {
           default: false,
         }])).enable;
 
-    p.setup({ projectRoot, provider, scope, enableCommunity, force, configPath });
+    await p.setup({ projectRoot, provider, scope, enableCommunity, force, configPath });
   }
 
   public async manifest(): Promise<void> {
     const projectRoot = await this.getProjectRoot();
     const p           = await this.plugin(this.getComponentType());
     log.section('Generating .agents/apm.json');
-    const manifest           = p.manifest({ projectRoot });
+    const manifest           = await p.manifest({ projectRoot });
     const { skills, agents } = manifest.packages;
     log.ok(`apm.json written — ${skills.length} skills, ${agents.length} agents`);
     console.log();
@@ -257,7 +259,7 @@ export class ApmCLIController extends KzController {
   public async refresh(): Promise<void> {
     const projectRoot = await this.getProjectRoot();
     const p           = await this.plugin(this.getComponentType());
-    p.refresh({ projectRoot, sourceName: this.args?.source as string | undefined });
+    await p.refresh({ projectRoot, sourceName: this.args?.source as string | undefined });
   }
 
 }

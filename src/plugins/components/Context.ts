@@ -1,26 +1,27 @@
-import fs from 'fs';
-import { ApmPackage, InstalledMeta } from '../../models/package.model';
-import { PackageType } from '../../models/provider.model';
+import type { Dirent } from 'fs';
+import { IApmPackage } from '../../models/IApmPackage';
+import { IInstalledMeta } from '../../models/IInstalledMeta';
+import { PackageType } from '../../models/PackageType';
 import { BaseComponent } from './BaseComponent';
 
 /**
  * Context — component for context definition files.
- *
- * Contexts are structured markdown files that inject domain knowledge into
- * an AI session (e.g. project glossary, architecture overview). They differ
- * from skills in that they are not prefixed with 'ks-' and do not contain
- * executable instructions — only reference material.
- *
  * Full implementation is planned for a future phase.
  * This stub registers the component type so the CLI can enumerate it.
  */
 export class Context extends BaseComponent {
-  readonly type          = PackageType.CONTEXT;
-  readonly installSubdir = 'contexts';
+  readonly type:          PackageType;
+  readonly installSubdir: string;
 
-  matchEntry(_entry: fs.Dirent, _parentDir: string): boolean { return false; }
-  readMeta(_entryPath: string, _entryName: string): Partial<ApmPackage> { return {}; }
-  copyTo(_src: string, _name: string, _dir: string): void { /* not implemented */ }
-  removeFrom(_name: string, _dir: string): void { /* not implemented */ }
-  listFrom(_dir: string, _map: Map<string, string>): InstalledMeta[] { return []; }
+  constructor(dependency?: ConstructorParameters<typeof BaseComponent>[0]) {
+    super(dependency);
+    this.type          = PackageType.CONTEXT;
+    this.installSubdir = 'contexts';
+  }
+
+  async matchEntry(_entry: Dirent, _parentDir: string): Promise<boolean> { return false; }
+  async readMeta(_entryPath: string, _entryName: string): Promise<Partial<IApmPackage>> { return {}; }
+  async copyTo(_src: string, _name: string, _dir: string): Promise<void> { /* not implemented */ }
+  async removeFrom(_name: string, _dir: string): Promise<void> { /* not implemented */ }
+  async listFrom(_dir: string, _map: Map<string, string>): Promise<IInstalledMeta[]> { return []; }
 }

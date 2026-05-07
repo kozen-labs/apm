@@ -1,46 +1,40 @@
 import { MCPController, VCategory } from '@kozen/engine';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { z } from 'zod';
-import { PackageType, Provider, Scope } from '../models/provider.model';
+import { PackageType } from '../models/PackageType';
+import { Provider } from '../models/Provider';
+import { Scope } from '../models/Scope';
 import { findProjectRoot } from '../utils/system';
-import type { IComponent } from '../plugins/components/IComponent';
+import type { IComponent } from '../models/IComponent';
 
 /**
  * ApmMCPController — thin dispatcher over the component plugin system.
  *
  * Each MCP tool resolves the matching component plugin and calls its action.
- * The plugin handles all orchestration; the controller maps MCP args → plugin opts.
- *
  * Tool naming convention: kozen_apm_<action>
- * MCP config example (Claude Code / Cursor / VS Code):
- *
- *   { "command": "npx", "args": ["kozen", "--moduleLoad=@kozen/apm", "--type=mcp"],
- *     "env": { "KOZEN_LOG_LEVEL": "NONE" } }
- *
- * IMPORTANT — KZN-003 workaround:
- *   KOZEN_LOG_LEVEL=NONE must be set to prevent console output from
- *   corrupting the JSON-RPC stdout stream. When KZN-003 is fixed upstream,
- *   this requirement will be automatic.
  */
 export class ApmMCPController extends MCPController {
 
-  // ── shared Zod schemas ────────────────────────────────────────────────────
+  private readonly componentSchema: ReturnType<typeof z.enum>;
+  private readonly providerSchema:  ReturnType<typeof z.enum>;
+  private readonly scopeSchema:     ReturnType<typeof z.enum>;
+  private readonly projectRootSchema: z.ZodOptional<z.ZodString>;
 
-  private static readonly componentSchema = z
-    .enum(['skill', 'agent']).default('skill')
-    .describe('Component type to operate on');
-
-  private static readonly providerSchema = z
-    .enum(['standard', 'claude', 'cursor', 'vscode', 'windsurf']).default('standard')
-    .describe('AI tool provider to install into');
-
-  private static readonly scopeSchema = z
-    .enum(['local', 'global']).default('local')
-    .describe('Install scope: local (current project) or global (home directory)');
-
-  private static readonly projectRootSchema = z
-    .string().optional()
-    .describe('Absolute path to the project root. Auto-detected from CWD if omitted.');
+  constructor(dependency?: any) {
+    super(dependency);
+    this.componentSchema = z
+      .enum(['skill', 'agent']).default('skill')
+      .describe('Component type to operate on') as unknown as ReturnType<typeof z.enum>;
+    this.providerSchema = z
+      .enum(['standard', 'claude', 'cursor', 'vscode', 'windsurf']).default('standard')
+      .describe('AI tool provider to install into') as unknown as ReturnType<typeof z.enum>;
+    this.scopeSchema = z
+      .enum(['local', 'global']).default('local')
+      .describe('Install scope: local (current project) or global (home directory)') as unknown as ReturnType<typeof z.enum>;
+    this.projectRootSchema = z
+      .string().optional()
+      .describe('Absolute path to the project root. Auto-detected from CWD if omitted.');
+  }
 
   // ── plugin resolution ─────────────────────────────────────────────────────
 
@@ -51,65 +45,57 @@ export class ApmMCPController extends MCPController {
   // ── register tools ────────────────────────────────────────────────────────
 
   public async register(server: McpServer): Promise<void> {
+    const { componentSchema, providerSchema, scopeSchema, projectRootSchema } = this;
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore TS2589 — Zod+MCP generic inference exceeds TypeScript's depth limit; runtime is correct.
     server.registerTool('kozen_apm_install', {
       description:
         'Install AI skills or agents into an AI tool provider ' +
-        '(Claude Code, Cursor, VSCode, Windsurf, or a standard .agents/ directory). ' +
-        'Leave packages empty to install all available packages of the given type.',
+        '(Claude Code, Cursor, VSCode, Windsurf, or a standard .agents/ directory).',
       inputSchema: {
         packages:    z.array(z.string()).optional().describe('Package names to install. Omit to install all available.'),
-        component:   ApmMCPController.componentSchema,
-        provider:    ApmMCPController.providerSchema,
-        scope:       ApmMCPController.scopeSchema,
-        projectRoot: ApmMCPController.projectRootSchema,
+        component:   componentSchema,
+        provider:    providerSchema,
+        scope:       scopeSchema,
+        projectRoot: projectRootSchema,
         dir:         z.string().optional().describe('Custom install directory (overrides scope path)'),
       },
     }, this._install.bind(this));
 
     server.registerTool('kozen_apm_uninstall', {
-      description:
-        'Remove installed AI skills or agents from a provider. ' +
-        'Leave packages empty to remove all installed packages at the given provider+scope.',
+      description: 'Remove installed AI skills or agents from a provider.',
       inputSchema: {
         packages:    z.array(z.string()).optional().describe('Package names to remove. Omit to remove all.'),
-        component:   ApmMCPController.componentSchema,
-        provider:    ApmMCPController.providerSchema,
-        scope:       ApmMCPController.scopeSchema,
-        projectRoot: ApmMCPController.projectRootSchema,
+        component:   componentSchema,
+        provider:    providerSchema,
+        scope:       scopeSchema,
+        projectRoot: projectRootSchema,
         dir:         z.string().optional().describe('Custom install directory'),
       },
     }, this._uninstall.bind(this));
 
     server.registerTool('kozen_apm_list', {
-      description:
-        'List all available AI packages (skills or agents) from the configured sources ' +
-        '(local, github, npm). Returns name, group, description, and update date.',
+      description: 'List all available AI packages (skills or agents) from the configured sources.',
       inputSchema: {
-        component:   ApmMCPController.componentSchema,
-        projectRoot: ApmMCPController.projectRootSchema,
+        component:   componentSchema,
+        projectRoot: projectRootSchema,
       },
     }, this._list.bind(this));
 
     server.registerTool('kozen_apm_status', {
-      description:
-        'Show all installed AI packages across every provider and scope, ' +
-        'including whether each package is outdated.',
+      description: 'Show all installed AI packages across every provider and scope.',
       inputSchema: {
-        component:   ApmMCPController.componentSchema,
-        projectRoot: ApmMCPController.projectRootSchema,
+        component:   componentSchema,
+        projectRoot: projectRootSchema,
       },
     }, this._status.bind(this));
 
     server.registerTool('kozen_apm_outdated', {
-      description:
-        'Return only the installed packages that have a newer version available ' +
-        'in the source registry.',
+      description: 'Return only the installed packages that have a newer version available.',
       inputSchema: {
-        component:   ApmMCPController.componentSchema,
-        projectRoot: ApmMCPController.projectRootSchema,
+        component:   componentSchema,
+        projectRoot: projectRootSchema,
       },
     }, this._outdated.bind(this));
   }
@@ -122,20 +108,20 @@ export class ApmMCPController extends MCPController {
   }): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
     const flow = this.getId();
     try {
-      const type      = (args.component ?? 'skill') as PackageType;
-      const provider  = (args.provider  ?? 'standard') as Provider;
-      const scope     = (args.scope     ?? 'local') as Scope;
-      const names     = args.packages ?? [];
-      const root      = args.projectRoot ?? findProjectRoot();
+      const type     = (args.component ?? 'skill') as PackageType;
+      const provider = (args.provider  ?? 'standard') as Provider;
+      const scope    = (args.scope     ?? 'local') as Scope;
+      const names    = args.packages ?? [];
+      const root     = args.projectRoot ?? findProjectRoot();
 
       await this.log({
-        flow, src: 'APM:ApmMCPController:install',
+        flow, src: 'apm:ApmMCPController:install',
         message: `Installing ${names.length || 'all'} ${type}(s) via ${provider}/${scope}`,
         category: VCategory.mcp.tool,
       });
 
       const p      = await this.plugin(type);
-      const result = p.install({ projectRoot: root, provider, scope, names, customDir: args.dir });
+      const result = await p.install({ projectRoot: root, provider, scope, names, customDir: args.dir });
 
       return this._text(JSON.stringify({
         succeeded: result.succeeded,
@@ -160,13 +146,13 @@ export class ApmMCPController extends MCPController {
       const root     = args.projectRoot ?? findProjectRoot();
 
       await this.log({
-        flow, src: 'APM:ApmMCPController:uninstall',
+        flow, src: 'apm:ApmMCPController:uninstall',
         message: `Removing ${names.length || 'all'} ${type}(s) from ${provider}/${scope}`,
         category: VCategory.mcp.tool,
       });
 
       const p      = await this.plugin(type);
-      const result = p.uninstall({ projectRoot: root, provider, scope, names, customDir: args.dir });
+      const result = await p.uninstall({ projectRoot: root, provider, scope, names, customDir: args.dir });
 
       return this._text(JSON.stringify({
         succeeded: result.succeeded,
@@ -183,7 +169,7 @@ export class ApmMCPController extends MCPController {
       const type     = (args.component ?? 'skill') as PackageType;
       const root     = args.projectRoot ?? findProjectRoot();
       const p        = await this.plugin(type);
-      const packages = p.list({ projectRoot: root });
+      const packages = await p.list({ projectRoot: root });
       return this._text(JSON.stringify(packages, null, 2));
     } catch (err) { return this._error(err); }
   }
@@ -195,7 +181,7 @@ export class ApmMCPController extends MCPController {
       const type      = (args.component ?? 'skill') as PackageType;
       const root      = args.projectRoot ?? findProjectRoot();
       const p         = await this.plugin(type);
-      const installed = p.status({ projectRoot: root });
+      const installed = await p.status({ projectRoot: root });
       return this._text(JSON.stringify(installed, null, 2));
     } catch (err) { return this._error(err); }
   }
@@ -204,10 +190,10 @@ export class ApmMCPController extends MCPController {
     component?: string; projectRoot?: string;
   }): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
     try {
-      const type    = (args.component ?? 'skill') as PackageType;
-      const root    = args.projectRoot ?? findProjectRoot();
-      const p       = await this.plugin(type);
-      const stale   = p.outdated({ projectRoot: root });
+      const type  = (args.component ?? 'skill') as PackageType;
+      const root  = args.projectRoot ?? findProjectRoot();
+      const p     = await this.plugin(type);
+      const stale = await p.outdated({ projectRoot: root });
       return this._text(JSON.stringify(stale, null, 2));
     } catch (err) { return this._error(err); }
   }

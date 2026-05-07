@@ -1,8 +1,10 @@
-import fs from 'fs';
+import { access, readdir, rm, mkdir, copyFile } from 'fs/promises';
+import type { Dirent } from 'fs';
 import path from 'path';
-import { ApmPackage, InstalledMeta } from '../../models/package.model';
-import { PackageType } from '../../models/provider.model';
-import { parseFrontmatter } from '../../utils/frontmatter';
+import { IApmPackage } from '../../models/IApmPackage';
+import { IInstalledMeta } from '../../models/IInstalledMeta';
+import { PackageType } from '../../models/PackageType';
+import { parseFrontmatterAsync } from '../../utils/frontmatter';
 import { BaseComponent } from './BaseComponent';
 
 /**
@@ -10,28 +12,25 @@ import { BaseComponent } from './BaseComponent';
  *
  * A skill is a directory whose name begins with 'ks-' and that contains
  * a SKILL.md file with YAML frontmatter (description, created, updated).
- *
- * Source layout:
- *   .agents/skills/
- *     ks-mongodb-core/
- *       SKILL.md          ← required
- *       references/       ← optional supporting files
- *
- * Default install layout (standard, claude providers):
- *   <installDir>/ks-mongodb-core/  (directory copy)
  */
 export class Skill extends BaseComponent {
-  readonly type        = PackageType.SKILL;
-  readonly installSubdir = 'skills';
+  readonly type:          PackageType;
+  readonly installSubdir: string;
 
-  matchEntry(entry: fs.Dirent, parentDir: string): boolean {
-    if (!entry.isDirectory()) return false;
-    if (!entry.name.startsWith('ks-')) return false;
-    return fs.existsSync(path.join(parentDir, entry.name, 'SKILL.md'));
+  constructor(dependency?: ConstructorParameters<typeof BaseComponent>[0]) {
+    super(dependency);
+    this.type          = PackageType.SKILL;
+    this.installSubdir = 'skills';
   }
 
-  readMeta(entryPath: string, entryName: string): Partial<ApmPackage> {
-    const fm = parseFrontmatter(path.join(entryPath, 'SKILL.md'));
+  async matchEntry(entry: Dirent, parentDir: string): Promise<boolean> {
+    if (!entry.isDirectory()) return false;
+    if (!entry.name.startsWith('ks-')) return false;
+    try { await access(path.join(parentDir, entry.name, 'SKILL.md')); return true; } catch { return false; }
+  }
+
+  async readMeta(entryPath: string, entryName: string): Promise<Partial<IApmPackage>> {
+    const fm = await parseFrontmatterAsync(path.join(entryPath, 'SKILL.md'));
     return {
       path:        entryName,
       description: String(fm.description ?? ''),
@@ -41,54 +40,65 @@ export class Skill extends BaseComponent {
     };
   }
 
-  copyTo(srcPath: string, bareName: string, installDir: string): void {
+  async copyTo(srcPath: string, bareName: string, installDir: string): Promise<void> {
     const dst = path.join(installDir, bareName);
     if (this.samePath(dst, srcPath)) return;
-    fs.rmSync(dst, { recursive: true, force: true });
-    this.copyDir(srcPath, dst);
+    try { await rm(dst, { recursive: true, force: true }); } catch { /* ignore */ }
+    await this.copyDir(srcPath, dst);
   }
 
-  removeFrom(bareName: string, installDir: string): void {
+  async removeFrom(bareName: string, installDir: string): Promise<void> {
     const p = path.join(installDir, bareName);
-    if (!fs.existsSync(p)) {
+    try {
+      await access(p);
+    } catch {
       throw Object.assign(new Error(`Not found: ${p}`), { code: 'ENOENT' });
     }
-    fs.rmSync(p, { recursive: true, force: true });
+    await rm(p, { recursive: true, force: true });
   }
 
-  listFrom(installDir: string, sourceMap: Map<string, string>): InstalledMeta[] {
-    if (!fs.existsSync(installDir)) return [];
-    const out: InstalledMeta[] = [];
-
-    for (const entry of fs.readdirSync(installDir, { withFileTypes: true })) {
-      if (!entry.isDirectory() || !entry.name.startsWith('ks-')) continue;
-      const pkgPath  = path.join(installDir, entry.name);
-      const skillMd  = path.join(pkgPath, 'SKILL.md');
-      if (!fs.existsSync(skillMd)) continue;
-
-      const fm               = parseFrontmatter(skillMd);
-      const installedUpdated = String(fm.updated ?? '');
-      const sourceUpdated    = sourceMap.get(entry.name) ?? '';
-      out.push({
-        name:             entry.name,
-        installPath:      pkgPath,
-        installedUpdated,
-        sourceUpdated,
-        isOutdated: !!sourceUpdated && !!installedUpdated && sourceUpdated > installedUpdated,
-      });
+  async listFrom(installDir: string, sourceMap: Map<string, string>): Promise<IInstalledMeta[]> {
+    let entries: Dirent[];
+    try {
+      entries = await readdir(installDir, { withFileTypes: true });
+    } catch {
+      return [];
     }
-    return out;
+
+    const results = await Promise.all(
+      entries
+        .filter(e => e.isDirectory() && e.name.startsWith('ks-'))
+        .map(async entry => {
+          const pkgPath  = path.join(installDir, entry.name);
+          const skillMd  = path.join(pkgPath, 'SKILL.md');
+          try { await access(skillMd); } catch { return null; }
+          const fm               = await parseFrontmatterAsync(skillMd);
+          const installedUpdated = String(fm.updated ?? '');
+          const sourceUpdated    = sourceMap.get(entry.name) ?? '';
+          return {
+            name:             entry.name,
+            installPath:      pkgPath,
+            installedUpdated,
+            sourceUpdated,
+            isOutdated: !!sourceUpdated && !!installedUpdated && sourceUpdated > installedUpdated,
+          } satisfies IInstalledMeta;
+        }),
+    );
+    return results.filter(Boolean) as IInstalledMeta[];
   }
 
   // ── private ──────────────────────────────────────────────────────────────
 
-  private copyDir(src: string, dst: string): void {
-    fs.mkdirSync(dst, { recursive: true });
-    for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-      const s = path.join(src, entry.name);
-      const d = path.join(dst, entry.name);
-      entry.isDirectory() ? this.copyDir(s, d) : fs.copyFileSync(s, d);
-    }
+  private async copyDir(src: string, dst: string): Promise<void> {
+    await mkdir(dst, { recursive: true });
+    const entries = await readdir(src, { withFileTypes: true });
+    await Promise.all(
+      entries.map(entry => {
+        const s = path.join(src, entry.name);
+        const d = path.join(dst, entry.name);
+        return entry.isDirectory() ? this.copyDir(s, d) : copyFile(s, d);
+      }),
+    );
   }
 
   private samePath(a: string, b: string): boolean {

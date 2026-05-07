@@ -1,38 +1,44 @@
-import fs from 'fs';
+import { access, writeFile, mkdir, rm, readFile } from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
-import { ApmPackage } from '../../models/package.model';
-import { ApmSource } from '../../models/config.model';
-import { IComponentScanner } from '../../models/component.model';
-import { IRepository } from './IRepository';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { IApmPackage } from '../../models/IApmPackage';
+import { IApmSource } from '../../models/IApmSource';
+import { IComponentScanner } from '../../models/IComponentScanner';
+import { IRepository } from '../../models/IRepository';
 import { LocalRepository } from './LocalRepository';
 
-const STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const execFileAsync = promisify(execFile);
+const STALE_MS = 24 * 60 * 60 * 1000;
 
 export class GitHubRepository implements IRepository {
-  readonly type = 'github';
+  readonly type: string;
+  private readonly localRepo: LocalRepository;
 
-  private local = new LocalRepository();
-
-  list(source: ApmSource, cacheDir: string, _projectRoot: string, component: IComponentScanner): ApmPackage[] {
-    const repoDir = this.getRepoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) this.clone(source, repoDir);
-    return this.local.list(this.toCacheSource(source, repoDir), cacheDir, repoDir, component);
+  constructor(dependency?: { localRepo?: LocalRepository }) {
+    this.type      = 'github';
+    this.localRepo = dependency?.localRepo ?? new LocalRepository();
   }
 
-  getLocalPath(pkg: ApmPackage, source: ApmSource, cacheDir: string, _projectRoot: string): string {
+  async list(source: IApmSource, cacheDir: string, _projectRoot: string, component: IComponentScanner): Promise<IApmPackage[]> {
     const repoDir = this.getRepoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) this.clone(source, repoDir);
-    return this.local.getLocalPath(pkg, this.toCacheSource(source, repoDir), cacheDir, repoDir);
+    if (!(await this.exists(repoDir))) await this.clone(source, repoDir);
+    return this.localRepo.list(this.toCacheSource(source, repoDir), cacheDir, repoDir, component);
   }
 
-  refresh(source: ApmSource, cacheDir: string): void {
+  async getLocalPath(pkg: IApmPackage, source: IApmSource, cacheDir: string, _projectRoot: string): Promise<string> {
     const repoDir = this.getRepoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) { this.clone(source, repoDir); return; }
+    if (!(await this.exists(repoDir))) await this.clone(source, repoDir);
+    return this.localRepo.getLocalPath(pkg, this.toCacheSource(source, repoDir), cacheDir, repoDir);
+  }
+
+  async refresh(source: IApmSource, cacheDir: string): Promise<void> {
+    const repoDir = this.getRepoDir(source, cacheDir);
+    if (!(await this.exists(repoDir))) { await this.clone(source, repoDir); return; }
     try {
-      execSync(`git -C "${repoDir}" pull --ff-only --quiet`, { stdio: 'pipe' });
-      fs.writeFileSync(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
+      await execFileAsync('git', ['-C', repoDir, 'pull', '--ff-only', '--quiet']);
+      await writeFile(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
     } catch (err) {
       throw new Error(
         `Failed to refresh GitHub source "${source.name}" (${source.url}): ${String(err)}`,
@@ -40,29 +46,34 @@ export class GitHubRepository implements IRepository {
     }
   }
 
-  isStale(source: ApmSource, cacheDir: string): boolean {
+  async isStale(source: IApmSource, cacheDir: string): Promise<boolean> {
     const markerFile = path.join(this.getRepoDir(source, cacheDir), '.apm-last-refresh');
-    if (!fs.existsSync(markerFile)) return true;
-    const lastRefresh = new Date(fs.readFileSync(markerFile, 'utf-8').trim()).getTime();
-    return Date.now() - lastRefresh > STALE_MS;
+    try {
+      const content = await readFile(markerFile, 'utf-8');
+      return Date.now() - new Date(content.trim()).getTime() > STALE_MS;
+    } catch {
+      return true;
+    }
   }
 
   // ── private ──────────────────────────────────────────────────────────────
 
-  private getRepoDir(source: ApmSource, cacheDir: string): string {
+  private getRepoDir(source: IApmSource, cacheDir: string): string {
     return path.join(cacheDir || path.join(os.homedir(), 'apm.cache'), source.name);
   }
 
-  private clone(source: ApmSource, repoDir: string): void {
+  private async clone(source: IApmSource, repoDir: string): Promise<void> {
     if (!source.url) throw new Error(`GitHub source "${source.name}" has no url configured.`);
-    this.assertGit();
-    fs.mkdirSync(path.dirname(repoDir), { recursive: true });
-    const refFlag = source.ref ? `--branch "${source.ref}"` : '';
+    await this.assertGit();
+    await mkdir(path.dirname(repoDir), { recursive: true });
+    const args = ['clone', '--depth=1'];
+    if (source.ref) args.push('--branch', source.ref);
+    args.push(source.url, repoDir);
     try {
-      execSync(`git clone --depth=1 ${refFlag} "${source.url}" "${repoDir}"`, { stdio: 'pipe' });
-      fs.writeFileSync(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
+      await execFileAsync('git', args);
+      await writeFile(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
     } catch (err) {
-      if (fs.existsSync(repoDir)) fs.rmSync(repoDir, { recursive: true, force: true });
+      try { await rm(repoDir, { recursive: true, force: true }); } catch { /* best-effort cleanup */ }
       throw new Error(
         `Failed to clone "${source.url}": ${String(err)}\n` +
         'Ensure git is on your PATH and the URL is accessible.',
@@ -70,9 +81,9 @@ export class GitHubRepository implements IRepository {
     }
   }
 
-  private assertGit(): void {
+  private async assertGit(): Promise<void> {
     try {
-      execSync('git --version', { stdio: 'pipe' });
+      await execFileAsync('git', ['--version']);
     } catch {
       throw new Error(
         'git is required for GitHub repository sources but was not found on PATH.\n' +
@@ -81,7 +92,11 @@ export class GitHubRepository implements IRepository {
     }
   }
 
-  private toCacheSource(source: ApmSource, repoDir: string): ApmSource {
+  private toCacheSource(source: IApmSource, repoDir: string): IApmSource {
     return { ...source, type: 'local', path: repoDir };
+  }
+
+  private async exists(p: string): Promise<boolean> {
+    try { await access(p); return true; } catch { return false; }
   }
 }

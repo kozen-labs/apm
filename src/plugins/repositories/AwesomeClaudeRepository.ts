@@ -1,15 +1,15 @@
-import fs from 'fs';
+import { access, readFile, writeFile, mkdir, stat } from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
-import { ApmPackage } from '../../models/package.model';
-import { ApmSource } from '../../models/config.model';
-import { PackageType, inferGroup } from '../../models/provider.model';
-import { IComponentScanner } from '../../models/component.model';
-import { IRepository } from './IRepository';
+import { IApmPackage } from '../../models/IApmPackage';
+import { IApmSource } from '../../models/IApmSource';
+import { PackageType } from '../../models/PackageType';
+import { inferGroup } from '../../models/Groups';
+import { IComponentScanner } from '../../models/IComponentScanner';
+import { IRepository } from '../../models/IRepository';
 import { GitHubRepository } from './GitHubRepository';
 
-const CATALOG_STALE_MS = 6 * 60 * 60 * 1000; // 6 h
+const CATALOG_STALE_MS = 6 * 60 * 60 * 1000;
 
 interface CatalogEntry {
   name:        string;
@@ -23,52 +23,61 @@ interface CatalogEntry {
 }
 
 export class AwesomeClaudeRepository implements IRepository {
-  readonly type = 'awesome-claude';
+  readonly type: string;
+  private readonly githubRepo: GitHubRepository;
 
-  private github = new GitHubRepository();
+  constructor(dependency?: { githubRepo?: GitHubRepository }) {
+    this.type       = 'awesome-claude';
+    this.githubRepo = dependency?.githubRepo ?? new GitHubRepository();
+  }
 
-  list(source: ApmSource, cacheDir: string, _projectRoot: string, _component?: IComponentScanner): ApmPackage[] {
-    const catalog = this.loadCatalog(source, cacheDir);
+  async list(source: IApmSource, cacheDir: string, _projectRoot: string, _component?: IComponentScanner): Promise<IApmPackage[]> {
+    const catalog = await this.loadCatalog(source, cacheDir);
     return catalog.map(entry => this.toPackage(entry, source));
   }
 
-  getLocalPath(pkg: ApmPackage, source: ApmSource, cacheDir: string, _projectRoot: string): string {
+  async getLocalPath(pkg: IApmPackage, _source: IApmSource, cacheDir: string, _projectRoot: string): Promise<string> {
     if (!pkg.localPath) {
       throw new Error(`awesome-claude package "${pkg.name}" has no source URL in localPath.`);
     }
-    const ghSource: ApmSource = {
+    const ghSource: IApmSource = {
       name:       `awesome-claude_${pkg.name}`,
       type:       'github',
       url:        pkg.localPath,
-      skillsPath: (pkg as ApmPackage & { _skillsPath?: string })._skillsPath,
-      agentsPath: (pkg as ApmPackage & { _agentsPath?: string })._agentsPath,
+      skillsPath: (pkg as IApmPackage & { _skillsPath?: string })._skillsPath,
+      agentsPath: (pkg as IApmPackage & { _agentsPath?: string })._agentsPath,
     };
-    return this.github.getLocalPath(pkg, ghSource, cacheDir, '');
+    return this.githubRepo.getLocalPath(pkg, ghSource, cacheDir, '');
   }
 
-  refresh(source: ApmSource, cacheDir: string): void {
-    this.loadCatalog(source, cacheDir, true);
+  async refresh(source: IApmSource, cacheDir: string): Promise<void> {
+    await this.loadCatalog(source, cacheDir, true);
   }
 
-  isStale(source: ApmSource, cacheDir: string): boolean {
+  async isStale(source: IApmSource, cacheDir: string): Promise<boolean> {
     const cachePath = this.catalogCachePath(source, cacheDir);
-    if (!fs.existsSync(cachePath)) return true;
-    return Date.now() - fs.statSync(cachePath).mtimeMs > CATALOG_STALE_MS;
+    try {
+      const s = await stat(cachePath);
+      return Date.now() - s.mtimeMs > CATALOG_STALE_MS;
+    } catch {
+      return true;
+    }
   }
 
   // ── private ─────────────────────────────────────────────────────────────────
 
-  private loadCatalog(source: ApmSource, cacheDir: string, force = false): CatalogEntry[] {
+  private async loadCatalog(source: IApmSource, cacheDir: string, force = false): Promise<CatalogEntry[]> {
     const cachePath = this.catalogCachePath(source, cacheDir);
 
-    if (!force && fs.existsSync(cachePath)) {
+    if (!force && await this.exists(cachePath)) {
       try {
-        return JSON.parse(fs.readFileSync(cachePath, 'utf-8')) as CatalogEntry[];
+        const text = await readFile(cachePath, 'utf-8');
+        return JSON.parse(text) as CatalogEntry[];
       } catch { /* fall through to re-fetch */ }
     }
 
     const url     = source.url ?? 'https://awesomeclaude.ai/api/skills.json';
-    const fetched = this.fetchJson(url);
+    const fetched = await this.fetchJson(url);
 
     if (!fetched) return [];
 
@@ -76,29 +85,25 @@ export class AwesomeClaudeRepository implements IRepository {
       ? (fetched as CatalogEntry[])
       : ((fetched as { skills?: CatalogEntry[] }).skills ?? []);
 
-    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
-    fs.writeFileSync(cachePath, JSON.stringify(entries, null, 2), 'utf-8');
+    await mkdir(path.dirname(cachePath), { recursive: true });
+    await writeFile(cachePath, JSON.stringify(entries, null, 2), 'utf-8');
     return entries;
   }
 
-  private fetchJson(url: string): unknown {
+  private async fetchJson(url: string): Promise<unknown> {
     try {
-      const raw = execSync(
-        `node -e "var h=require('https'),d='';` +
-        `h.get('${url}',function(r){r.on('data',function(c){d+=c});` +
-        `r.on('end',function(){process.stdout.write(d)})}).on('error',function(){process.exit(1)});"`,
-        { timeout: 15000, stdio: ['pipe', 'pipe', 'pipe'] },
-      ).toString('utf-8');
-      return JSON.parse(raw);
+      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!response.ok) return null;
+      return await response.json();
     } catch {
       return null;
     }
   }
 
-  private toPackage(entry: CatalogEntry, source: ApmSource): ApmPackage {
+  private toPackage(entry: CatalogEntry, source: IApmSource): IApmPackage {
     const rawName = entry.namespace ? `${entry.namespace}/${entry.name}` : entry.name;
     const name    = source.namespace ? `${source.namespace}/${rawName}` : rawName;
-    const pkg: ApmPackage & { _skillsPath?: string; _agentsPath?: string } = {
+    const pkg: IApmPackage & { _skillsPath?: string; _agentsPath?: string } = {
       name,
       path:        entry.name,
       type:        (entry.type ?? 'skill') as PackageType,
@@ -114,8 +119,12 @@ export class AwesomeClaudeRepository implements IRepository {
     return pkg;
   }
 
-  private catalogCachePath(source: ApmSource, cacheDir: string): string {
+  private catalogCachePath(source: IApmSource, cacheDir: string): string {
     const base = cacheDir || path.join(os.homedir(), '.apm', 'cache');
     return path.join(base, `${source.name}-catalog.json`);
+  }
+
+  private async exists(p: string): Promise<boolean> {
+    try { await access(p); return true; } catch { return false; }
   }
 }

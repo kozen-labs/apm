@@ -6,7 +6,9 @@ import { StandardProvider } from '../../src/plugins/providers/StandardProvider';
 import { VscodeProvider } from '../../src/plugins/providers/VscodeProvider';
 import { CursorProvider } from '../../src/plugins/providers/CursorProvider';
 import { LocalRepository } from '../../src/plugins/repositories/LocalRepository';
-import { PackageType, Provider, Scope } from '../../src/models/provider.model';
+import { PackageType } from '../../src/models/PackageType';
+import { Provider } from '../../src/models/Provider';
+import { Scope } from '../../src/models/Scope';
 import type { IIoC } from '@kozen/engine';
 
 function makeSkill(): Skill {
@@ -70,11 +72,11 @@ describe('install / uninstall via Skill', () => {
   });
 
   describe('install()', () => {
-    it('copies a skill directory to the target location', () => {
+    it('copies a skill directory to the target location', async () => {
       seedSkill(tmpDir, 'ks-mongodb-core');
       const target = path.join(tmpDir, 'install-target', 'skills');
 
-      const result = plugin.install({
+      const result = await plugin.install({
         projectRoot: tmpDir,
         provider:    Provider.STANDARD,
         scope:       Scope.LOCAL,
@@ -87,11 +89,11 @@ describe('install / uninstall via Skill', () => {
       expect(fs.existsSync(path.join(target, 'ks-mongodb-core', 'SKILL.md'))).toBe(true);
     });
 
-    it('installs into VSCode format (.mdc) when using the cursor provider', () => {
+    it('installs into Cursor format (.mdc) when using the cursor provider', async () => {
       seedSkill(tmpDir, 'ks-mongodb-core');
       const target = path.join(tmpDir, 'cursor-target');
 
-      const result = plugin.install({
+      const result = await plugin.install({
         projectRoot: tmpDir,
         provider:    Provider.CURSOR,
         scope:       Scope.LOCAL,
@@ -104,14 +106,14 @@ describe('install / uninstall via Skill', () => {
       expect(fs.existsSync(path.join(target, 'ks-mongodb-core.mdc'))).toBe(true);
     });
 
-    it('captures errors in result when the source path does not exist', () => {
+    it('captures errors in result when the source path does not exist', async () => {
       const brokenRepo = {
-        list: (_s: unknown, _c: string, _p: string, _comp: unknown) => [{
+        list: async (_s: unknown, _c: string, _p: string, _comp: unknown) => [{
           name: 'ks-broken', path: 'skills/ks-broken', type: PackageType.SKILL,
           description: '', group: 'MongoDB', created: '', updated: '', version: '1.0.0',
           sourceRef: 'local',
         }],
-        getLocalPath: () => path.join(tmpDir, 'nonexistent-source'),
+        getLocalPath: async () => path.join(tmpDir, 'nonexistent-source'),
       };
       const resolveSync = (key: string): unknown => {
         if (key.startsWith('apm:plugin:provider:')) return new StandardProvider();
@@ -124,7 +126,7 @@ describe('install / uninstall via Skill', () => {
       });
       writeConfig(tmpDir);
 
-      const result = brokenPlugin.install({
+      const result = await brokenPlugin.install({
         projectRoot: tmpDir,
         provider:    Provider.STANDARD,
         scope:       Scope.LOCAL,
@@ -136,10 +138,10 @@ describe('install / uninstall via Skill', () => {
       expect(result.succeeded).toHaveLength(0);
     });
 
-    it('returns elapsed time greater than or equal to zero', () => {
+    it('returns elapsed time greater than or equal to zero', async () => {
       seedSkill(tmpDir, 'ks-mongodb-core');
       const target = path.join(tmpDir, 'target');
-      const result = plugin.install({
+      const result = await plugin.install({
         projectRoot: tmpDir,
         provider:    Provider.STANDARD,
         scope:       Scope.LOCAL,
@@ -151,13 +153,13 @@ describe('install / uninstall via Skill', () => {
   });
 
   describe('uninstall()', () => {
-    it('removes an installed skill directory', () => {
+    it('removes an installed skill directory', async () => {
       seedSkill(tmpDir, 'ks-mongodb-core');
       const target = path.join(tmpDir, 'target');
 
-      plugin.install({ projectRoot: tmpDir, provider: Provider.STANDARD, scope: Scope.LOCAL, names: ['ks-mongodb-core'], customDir: target });
+      await plugin.install({ projectRoot: tmpDir, provider: Provider.STANDARD, scope: Scope.LOCAL, names: ['ks-mongodb-core'], customDir: target });
 
-      const result = plugin.uninstall({
+      const result = await plugin.uninstall({
         projectRoot: tmpDir,
         provider:    Provider.STANDARD,
         scope:       Scope.LOCAL,
@@ -168,11 +170,11 @@ describe('install / uninstall via Skill', () => {
       expect(fs.existsSync(path.join(target, 'ks-mongodb-core'))).toBe(false);
     });
 
-    it('marks a package as skipped when it is not installed', () => {
+    it('marks a package as skipped when it is not installed', async () => {
       const target = path.join(tmpDir, 'target');
       fs.mkdirSync(target, { recursive: true });
 
-      const result = plugin.uninstall({
+      const result = await plugin.uninstall({
         projectRoot: tmpDir,
         provider:    Provider.STANDARD,
         scope:       Scope.LOCAL,
@@ -182,8 +184,8 @@ describe('install / uninstall via Skill', () => {
       expect(result.skipped).toContain('ks-not-there');
     });
 
-    it('warns gracefully when the install path does not exist', () => {
-      const result = plugin.uninstall({
+    it('warns gracefully when the install path does not exist', async () => {
+      const result = await plugin.uninstall({
         projectRoot: tmpDir,
         provider:    Provider.STANDARD,
         scope:       Scope.LOCAL,

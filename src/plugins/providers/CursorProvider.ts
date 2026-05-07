@@ -1,17 +1,24 @@
-import fs from 'fs';
+import { access, writeFile, readdir, rm } from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { ApmPackage, InstalledPackage } from '../../models/package.model';
-import { PackageType, Provider, Scope } from '../../models/provider.model';
-import { ApmSource } from '../../models/config.model';
-import { IComponentOps } from '../../models/component.model';
-import { parseFrontmatter, stripFrontmatter } from '../../utils/frontmatter';
+import { IApmPackage } from '../../models/IApmPackage';
+import { IInstalledPackage } from '../../models/IInstalledPackage';
+import { PackageType } from '../../models/PackageType';
+import { Provider } from '../../models/Provider';
+import { Scope } from '../../models/Scope';
+import { IApmSource } from '../../models/IApmSource';
+import { IComponentOps } from '../../models/IComponentOps';
+import { IRepository } from '../../models/IRepository';
+import { IProvider } from '../../models/IProvider';
+import { parseFrontmatterAsync, stripFrontmatterAsync } from '../../utils/frontmatter';
 import { bareSkillName } from '../../utils/pkg';
-import { IRepository } from '../repositories/IRepository';
-import { IProvider } from './IProvider';
 
 export class CursorProvider implements IProvider {
-  readonly name = Provider.CURSOR;
+  readonly name: string;
+
+  constructor() {
+    this.name = Provider.CURSOR;
+  }
 
   getInstallPath(scope: Scope, projectRoot: string, customDir?: string): string {
     if (customDir) return customDir;
@@ -20,47 +27,52 @@ export class CursorProvider implements IProvider {
       : path.join(projectRoot, '.cursor', 'rules');
   }
 
-  install(pkg: ApmPackage, repo: IRepository, source: ApmSource, _component: IComponentOps, installPath: string, cacheDir: string, projectRoot: string): void {
+  async install(pkg: IApmPackage, repo: IRepository, source: IApmSource, _component: IComponentOps, installPath: string, cacheDir: string, projectRoot: string): Promise<void> {
     if (pkg.type === PackageType.AGENT) return;
-
-    const localPath = repo.getLocalPath(pkg, source, cacheDir, projectRoot);
+    const localPath = await repo.getLocalPath(pkg, source, cacheDir, projectRoot);
     const skillMd   = path.join(localPath, 'SKILL.md');
-    if (!fs.existsSync(skillMd)) throw new Error(`SKILL.md not found at ${skillMd}`);
-
-    const body = stripFrontmatter(skillMd);
+    try { await access(skillMd); } catch { throw new Error(`SKILL.md not found at ${skillMd}`); }
+    const body = await stripFrontmatterAsync(skillMd);
     const desc = pkg.description.replace(/"/g, "'").replace(/\n/g, ' ').trim().slice(0, 120);
     const mdc  = `---\ndescription: "${desc}"\nglobs: \nalwaysApply: false\n---\n\n${body}`;
-    fs.writeFileSync(path.join(installPath, `${bareSkillName(pkg.name)}.mdc`), mdc, 'utf-8');
+    await writeFile(path.join(installPath, `${bareSkillName(pkg.name)}.mdc`), mdc, 'utf-8');
   }
 
-  uninstall(name: string, _component: IComponentOps, installPath: string): void {
+  async uninstall(name: string, _component: IComponentOps, installPath: string): Promise<void> {
     const p = path.join(installPath, `${bareSkillName(name)}.mdc`);
-    if (!fs.existsSync(p)) throw Object.assign(new Error(`Not found: ${p}`), { code: 'ENOENT' });
-    fs.rmSync(p, { force: true });
+    try { await access(p); } catch { throw Object.assign(new Error(`Not found: ${p}`), { code: 'ENOENT' }); }
+    await rm(p, { force: true });
   }
 
-  listInstalled(installPath: string, type: IComponentOps, sourceMap: Map<string, string>): InstalledPackage[] {
-    if (!fs.existsSync(installPath) || type.type === PackageType.AGENT) return [];
-    const out: InstalledPackage[] = [];
-
-    for (const f of fs.readdirSync(installPath)) {
-      if (!f.endsWith('.mdc') || !f.startsWith('ks-')) continue;
-      const name             = f.replace(/\.mdc$/, '');
-      const fm               = parseFrontmatter(path.join(installPath, f));
-      const installedUpdated = String(fm.updated ?? '');
-      const sourceUpdated    = sourceMap.get(name) ?? '';
-      out.push({
-        name, type: type.type,
-        provider:     Provider.CURSOR,
-        scope:        Scope.LOCAL,
-        installPath:  path.join(installPath, f),
-        updated:      installedUpdated,
-        sourceUpdated,
-        isOutdated: !!sourceUpdated && !!installedUpdated && sourceUpdated > installedUpdated,
-      });
+  async listInstalled(installPath: string, component: IComponentOps, sourceMap: Map<string, string>): Promise<IInstalledPackage[]> {
+    if (component.type === PackageType.AGENT) return [];
+    let files: string[];
+    try {
+      files = await readdir(installPath);
+    } catch {
+      return [];
     }
-    return out;
+    const results = await Promise.all(
+      files
+        .filter(f => f.endsWith('.mdc') && f.startsWith('ks-'))
+        .map(async f => {
+          const name             = f.replace(/\.mdc$/, '');
+          const fm               = await parseFrontmatterAsync(path.join(installPath, f));
+          const installedUpdated = String(fm.updated ?? '');
+          const sourceUpdated    = sourceMap.get(name) ?? '';
+          return {
+            name, type: component.type,
+            provider:     Provider.CURSOR,
+            scope:        Scope.LOCAL,
+            installPath:  path.join(installPath, f),
+            updated:      installedUpdated,
+            sourceUpdated,
+            isOutdated: !!sourceUpdated && !!installedUpdated && sourceUpdated > installedUpdated,
+          } satisfies IInstalledPackage;
+        }),
+    );
+    return results;
   }
 
-  postInstall(): void { /* no-op */ }
+  async postInstall(): Promise<void> { /* no-op */ }
 }

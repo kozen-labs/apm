@@ -7,7 +7,8 @@ import {
   skillSourceBases,
   agentSourceBases,
 } from '../../src/utils/path.resolver';
-import { Provider, Scope } from '../../src/models/provider.model';
+import { Provider } from '../../src/models/Provider';
+import { Scope } from '../../src/models/Scope';
 
 const PROJECT_ROOT = '/project';
 

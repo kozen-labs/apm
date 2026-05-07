@@ -1,5 +1,6 @@
 import matter from 'gray-matter';
 import fs from 'fs';
+import { readFile } from 'fs/promises';
 
 export interface FrontmatterData {
   name?:        string;
@@ -26,10 +27,34 @@ export function parseFrontmatter(filePath: string): FrontmatterData {
   }
 }
 
+/**
+ * Async variant — preferred in service and plugin code to avoid blocking the event loop.
+ */
+export async function parseFrontmatterAsync(filePath: string): Promise<FrontmatterData> {
+  try {
+    const content = await readFile(filePath, 'utf-8');
+    return matter(content).data as FrontmatterData;
+  } catch {
+    return {};
+  }
+}
+
 /** Return the body of a markdown file with the frontmatter block stripped. */
 export function stripFrontmatter(filePath: string): string {
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
+    return matter(content).content.trimStart();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Async variant of stripFrontmatter — preferred in service and plugin code.
+ */
+export async function stripFrontmatterAsync(filePath: string): Promise<string> {
+  try {
+    const content = await readFile(filePath, 'utf-8');
     return matter(content).content.trimStart();
   } catch {
     return '';

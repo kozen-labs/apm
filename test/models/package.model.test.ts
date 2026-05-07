@@ -1,9 +1,14 @@
-import type { ApmPackage, InstalledPackage, ApmManifest, OperationResult } from '../../src/models/package.model';
-import { PackageType, Provider, Scope } from '../../src/models/provider.model';
+import type { IApmPackage } from '../../src/models/IApmPackage';
+import type { IInstalledPackage } from '../../src/models/IInstalledPackage';
+import type { IApmManifest } from '../../src/models/IApmManifest';
+import type { IOperationResult } from '../../src/models/IOperationResult';
+import { PackageType } from '../../src/models/PackageType';
+import { Provider } from '../../src/models/Provider';
+import { Scope } from '../../src/models/Scope';
 
-describe('ApmPackage interface', () => {
+describe('IApmPackage interface', () => {
   it('accepts a fully populated package object', () => {
-    const pkg: ApmPackage = {
+    const pkg: IApmPackage = {
       name: 'ks-mongodb-core',
       path: 'skills/ks-mongodb-core',
       type: PackageType.SKILL,
@@ -18,7 +23,7 @@ describe('ApmPackage interface', () => {
   });
 
   it('allows optional fields to be omitted', () => {
-    const pkg: ApmPackage = {
+    const pkg: IApmPackage = {
       name: 'ks-minimal',
       path: 'skills/ks-minimal',
       type: PackageType.SKILL,
@@ -32,9 +37,9 @@ describe('ApmPackage interface', () => {
   });
 });
 
-describe('InstalledPackage interface', () => {
+describe('IInstalledPackage interface', () => {
   it('computes isOutdated correctly', () => {
-    const outdated: InstalledPackage = {
+    const outdated: IInstalledPackage = {
       name: 'ks-mongodb-core',
       type: PackageType.SKILL,
       provider: Provider.CLAUDE,
@@ -46,7 +51,7 @@ describe('InstalledPackage interface', () => {
     };
     expect(outdated.isOutdated).toBe(true);
 
-    const upToDate: InstalledPackage = {
+    const upToDate: IInstalledPackage = {
       ...outdated,
       updated: '2025-04-01',
       isOutdated: false,
@@ -55,9 +60,9 @@ describe('InstalledPackage interface', () => {
   });
 });
 
-describe('ApmManifest interface', () => {
+describe('IApmManifest interface', () => {
   it('accepts a valid manifest with skills and agents', () => {
-    const manifest: ApmManifest = {
+    const manifest: IApmManifest = {
       schemaVersion: '1.0',
       name: 'sdlc-skills-pack',
       displayName: 'SDLC Skills Pack',
@@ -72,9 +77,9 @@ describe('ApmManifest interface', () => {
   });
 });
 
-describe('OperationResult interface', () => {
+describe('IOperationResult interface', () => {
   it('holds arrays for succeeded, skipped, and errors', () => {
-    const result: OperationResult = {
+    const result: IOperationResult = {
       succeeded: ['ks-mongodb-core'],
       skipped: [],
       errors: [['ks-broken', 'ENOENT']],

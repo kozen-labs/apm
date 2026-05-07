@@ -2,11 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { WindsurfProvider } from '../../src/plugins/providers/WindsurfProvider';
-import { PackageType, Provider, Scope } from '../../src/models/provider.model';
-import type { ApmPackage } from '../../src/models/package.model';
-import type { ApmSource } from '../../src/models/config.model';
-import type { IComponentOps } from '../../src/models/component.model';
-import type { IRepository } from '../../src/plugins/repositories/IRepository';
+import { PackageType } from '../../src/models/PackageType';
+import { Provider } from '../../src/models/Provider';
+import { Scope } from '../../src/models/Scope';
+import type { IApmPackage } from '../../src/models/IApmPackage';
+import type { IApmSource } from '../../src/models/IApmSource';
+import type { IComponentOps } from '../../src/models/IComponentOps';
+import type { IRepository } from '../../src/models/IRepository';
 
 function makeTmpDir(): string {
   const dir = path.join(os.tmpdir(), `apm-windsurf-test-${Date.now()}`);
@@ -14,14 +16,14 @@ function makeTmpDir(): string {
   return dir;
 }
 
-function seedSkill(root: string, name: string): { pkg: ApmPackage; skillDir: string } {
+function seedSkill(root: string, name: string): { pkg: IApmPackage; skillDir: string } {
   const skillDir = path.join(root, name);
   fs.mkdirSync(skillDir, { recursive: true });
   fs.writeFileSync(
     path.join(skillDir, 'SKILL.md'),
     `---\ndescription: Test skill\ncreated: 2024-01-01\nupdated: 2025-06-01\n---\n\n# ${name}\n\nContent here.\n`,
   );
-  const pkg: ApmPackage = {
+  const pkg: IApmPackage = {
     name,
     path:        name,
     type:        PackageType.SKILL,
@@ -37,19 +39,24 @@ function seedSkill(root: string, name: string): { pkg: ApmPackage; skillDir: str
 function mockRepo(localPath: string): IRepository {
   return {
     type:         'local',
-    list:         () => [],
-    getLocalPath: () => localPath,
-    refresh:      () => {},
-    isStale:      () => false,
+    list:         async () => [],
+    getLocalPath: async () => localPath,
+    refresh:      async () => {},
+    isStale:      async () => false,
   };
 }
 
-function mockSource(): ApmSource {
+function mockSource(): IApmSource {
   return { name: 'local', type: 'local', enabled: true };
 }
 
 function mockComponent(type: PackageType): IComponentOps {
-  return { type, copyTo: () => {}, removeFrom: () => {}, listFrom: () => [] };
+  return {
+    type,
+    copyTo:     async () => {},
+    removeFrom: async () => {},
+    listFrom:   async () => [],
+  };
 }
 
 describe('WindsurfProvider', () => {
@@ -83,12 +90,12 @@ describe('WindsurfProvider', () => {
   });
 
   describe('install()', () => {
-    it('writes a .windsurfrules file with frontmatter and body', () => {
+    it('writes a .windsurfrules file with frontmatter and body', async () => {
       const { pkg, skillDir } = seedSkill(tmpDir, 'ks-mongodb-core');
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
 
-      strategy.install(pkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
+      await strategy.install(pkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
 
       const outFile = path.join(target, 'ks-mongodb-core.windsurfrules');
       expect(fs.existsSync(outFile)).toBe(true);
@@ -97,9 +104,9 @@ describe('WindsurfProvider', () => {
       expect(content).toContain('Content here.');
     });
 
-    it('strips namespace prefix from the output filename', () => {
+    it('strips namespace prefix from the output filename', async () => {
       const { skillDir } = seedSkill(tmpDir, 'ks-mongodb-core');
-      const namespacedPkg: ApmPackage = {
+      const namespacedPkg: IApmPackage = {
         name:        'mongodb/ks-mongodb-core',
         path:        'ks-mongodb-core',
         type:        PackageType.SKILL,
@@ -112,76 +119,77 @@ describe('WindsurfProvider', () => {
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
 
-      strategy.install(namespacedPkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
+      await strategy.install(namespacedPkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
 
       expect(fs.existsSync(path.join(target, 'ks-mongodb-core.windsurfrules'))).toBe(true);
       expect(fs.existsSync(path.join(target, 'mongodb', 'ks-mongodb-core.windsurfrules'))).toBe(false);
     });
 
-    it('silently skips agent packages', () => {
-      const agentPkg: ApmPackage = {
+    it('silently skips agent packages', async () => {
+      const agentPkg: IApmPackage = {
         name: 'my-agent', path: 'my-agent.md', type: PackageType.AGENT,
         description: '', group: 'MongoDB', created: '', updated: '',
       };
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
-      expect(() => strategy.install(agentPkg, mockRepo(tmpDir), mockSource(), mockComponent(PackageType.AGENT), target, tmpDir, tmpDir)).not.toThrow();
+      await strategy.install(agentPkg, mockRepo(tmpDir), mockSource(), mockComponent(PackageType.AGENT), target, tmpDir, tmpDir);
       expect(fs.readdirSync(target)).toHaveLength(0);
     });
 
-    it('throws when SKILL.md is missing', () => {
+    it('throws when SKILL.md is missing', async () => {
       const emptyDir = path.join(tmpDir, 'empty-skill');
       fs.mkdirSync(emptyDir, { recursive: true });
-      const pkg: ApmPackage = {
+      const pkg: IApmPackage = {
         name: 'ks-missing', path: 'ks-missing', type: PackageType.SKILL,
         description: '', group: 'MongoDB', created: '', updated: '',
         localPath: emptyDir,
       };
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
-      expect(() => strategy.install(pkg, mockRepo(emptyDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir)).toThrow(/SKILL\.md not found/);
+      await expect(strategy.install(pkg, mockRepo(emptyDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir))
+        .rejects.toThrow(/SKILL\.md not found/);
     });
   });
 
   describe('uninstall()', () => {
-    it('removes the .windsurfrules file', () => {
+    it('removes the .windsurfrules file', async () => {
       const { pkg, skillDir } = seedSkill(tmpDir, 'ks-mongodb-core');
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
-      strategy.install(pkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
+      await strategy.install(pkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
 
-      strategy.uninstall('ks-mongodb-core', mockComponent(PackageType.SKILL), target);
+      await strategy.uninstall('ks-mongodb-core', mockComponent(PackageType.SKILL), target);
 
       expect(fs.existsSync(path.join(target, 'ks-mongodb-core.windsurfrules'))).toBe(false);
     });
 
-    it('strips namespace before removing', () => {
+    it('strips namespace before removing', async () => {
       const { pkg, skillDir } = seedSkill(tmpDir, 'ks-mongodb-core');
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
-      strategy.install(pkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
+      await strategy.install(pkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
 
-      expect(() => strategy.uninstall('mongodb/ks-mongodb-core', mockComponent(PackageType.SKILL), target)).not.toThrow();
+      await strategy.uninstall('mongodb/ks-mongodb-core', mockComponent(PackageType.SKILL), target);
       expect(fs.existsSync(path.join(target, 'ks-mongodb-core.windsurfrules'))).toBe(false);
     });
 
-    it('throws ENOENT when the file is not installed', () => {
+    it('throws ENOENT when the file is not installed', async () => {
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
-      expect(() => strategy.uninstall('ks-not-installed', mockComponent(PackageType.SKILL), target))
-        .toThrow(expect.objectContaining({ code: 'ENOENT' }));
+      await expect(strategy.uninstall('ks-not-installed', mockComponent(PackageType.SKILL), target))
+        .rejects.toThrow(expect.objectContaining({ code: 'ENOENT' }));
     });
   });
 
   describe('listInstalled()', () => {
-    it('returns installed skills with outdated detection', () => {
+    it('returns installed skills with outdated detection', async () => {
       const { pkg, skillDir } = seedSkill(tmpDir, 'ks-mongodb-core');
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
-      strategy.install(pkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
+      await strategy.install(pkg, mockRepo(skillDir), mockSource(), mockComponent(PackageType.SKILL), target, tmpDir, tmpDir);
 
       const sourceMap = new Map([['ks-mongodb-core', '2025-07-01']]);
-      const installed = strategy.listInstalled(target, mockComponent(PackageType.SKILL), sourceMap);
+      const installed = await strategy.listInstalled(target, mockComponent(PackageType.SKILL), sourceMap);
 
       expect(installed).toHaveLength(1);
       expect(installed[0].name).toBe('ks-mongodb-core');
@@ -189,15 +197,15 @@ describe('WindsurfProvider', () => {
       expect(installed[0].isOutdated).toBe(true);
     });
 
-    it('returns empty array for agent type', () => {
+    it('returns empty array for agent type', async () => {
       const target = path.join(tmpDir, 'rules');
       fs.mkdirSync(target, { recursive: true });
-      const result = strategy.listInstalled(target, mockComponent(PackageType.AGENT), new Map());
+      const result = await strategy.listInstalled(target, mockComponent(PackageType.AGENT), new Map());
       expect(result).toHaveLength(0);
     });
 
-    it('returns empty array when install path does not exist', () => {
-      const result = strategy.listInstalled('/nonexistent', mockComponent(PackageType.SKILL), new Map());
+    it('returns empty array when install path does not exist', async () => {
+      const result = await strategy.listInstalled('/nonexistent', mockComponent(PackageType.SKILL), new Map());
       expect(result).toHaveLength(0);
     });
   });

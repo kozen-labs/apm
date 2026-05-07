@@ -4,7 +4,8 @@ import os from 'os';
 import { Skill } from '../../src/plugins/components/Skill';
 import { StandardProvider } from '../../src/plugins/providers/StandardProvider';
 import { LocalRepository } from '../../src/plugins/repositories/LocalRepository';
-import { PackageType, Provider } from '../../src/models/provider.model';
+import { PackageType } from '../../src/models/PackageType';
+import { Provider } from '../../src/models/Provider';
 import type { IIoC } from '@kozen/engine';
 
 function makeSkill(): Skill {
@@ -63,31 +64,31 @@ describe('Skill list / status', () => {
   });
 
   describe('list() — available packages', () => {
-    it('discovers skills from the .agents/skills directory', () => {
+    it('discovers skills from the .agents/skills directory', async () => {
       seedSkill(tmpDir, 'ks-mongodb-core');
-      const skills = plugin.list({ projectRoot: tmpDir });
+      const skills = await plugin.list({ projectRoot: tmpDir });
       expect(skills).toHaveLength(1);
       expect(skills[0].name).toBe('ks-mongodb-core');
     });
 
-    it('does not return agents when listing skills', () => {
+    it('does not return agents when listing skills', async () => {
       seedSkill(tmpDir, 'ks-mongodb-core');
       seedSkill(tmpDir, 'ks-security-patterns');
-      const skills = plugin.list({ projectRoot: tmpDir });
+      const skills = await plugin.list({ projectRoot: tmpDir });
       expect(skills.every(p => p.type === PackageType.SKILL)).toBe(true);
     });
 
-    it('returns an empty array when no skill directories exist', () => {
-      const skills = plugin.list({ projectRoot: tmpDir });
+    it('returns an empty array when no skill directories exist', async () => {
+      const skills = await plugin.list({ projectRoot: tmpDir });
       expect(Array.isArray(skills)).toBe(true);
       expect(skills).toHaveLength(0);
     });
   });
 
   describe('status() — installed packages', () => {
-    it('returns an empty array when no packages are installed', () => {
+    it('returns an empty array when no packages are installed', async () => {
       seedSkill(tmpDir, 'ks-mongodb-core');
-      const installed = plugin.status({ projectRoot: tmpDir });
+      const installed = await plugin.status({ projectRoot: tmpDir });
       expect(Array.isArray(installed)).toBe(true);
     });
   });

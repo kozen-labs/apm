@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { ApmManifestManager } from '../../src/services/manifest';
-import { PackageType } from '../../src/models/provider.model';
+import { PackageType } from '../../src/models/PackageType';
 
 function makeTmpDir(): string {
   const dir = path.join(os.tmpdir(), `apm-manifest-test-${Date.now()}`);
@@ -31,11 +31,11 @@ describe('ApmManifestManager', () => {
   });
 
   describe('read()', () => {
-    it('returns null when apm.json does not exist', () => {
-      expect(manager.read()).toBeNull();
+    it('returns null when apm.json does not exist', async () => {
+      expect(await manager.read()).toBeNull();
     });
 
-    it('parses a valid apm.json', () => {
+    it('parses a valid apm.json', async () => {
       const manifestPath = path.join(tmpDir, '.agents', 'apm.json');
       fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
       fs.writeFileSync(manifestPath, JSON.stringify({
@@ -46,14 +46,14 @@ describe('ApmManifestManager', () => {
         description: '',
         packages: { skills: [], agents: [] },
       }));
-      const manifest = manager.read();
+      const manifest = await manager.read();
       expect(manifest).not.toBeNull();
       expect(manifest!.schemaVersion).toBe('1.0');
     });
   });
 
   describe('write()', () => {
-    it('creates apm.json and the manifest can be read back', () => {
+    it('creates apm.json and the manifest can be read back', async () => {
       const manifest = {
         schemaVersion: '1.0',
         name: 'test',
@@ -62,20 +62,20 @@ describe('ApmManifestManager', () => {
         description: '',
         packages: { skills: [], agents: [] },
       };
-      manager.write(manifest);
-      const readBack = manager.read();
+      await manager.write(manifest);
+      const readBack = await manager.read();
       expect(readBack).toEqual(manifest);
     });
   });
 
   describe('generate()', () => {
-    it('returns a manifest with empty skill/agent lists when dirs are absent', () => {
-      const manifest = manager.generate();
+    it('returns a manifest with empty skill/agent lists when dirs are absent', async () => {
+      const manifest = await manager.generate();
       expect(manifest.packages.skills).toEqual([]);
       expect(manifest.packages.agents).toEqual([]);
     });
 
-    it('scans .agents/skills/ and includes ks-* directories with SKILL.md', () => {
+    it('scans .agents/skills/ and includes ks-* directories with SKILL.md', async () => {
       writeSkillMd(tmpDir, 'ks-mongodb-core', {
         description: 'Core MongoDB skill',
         created: '2024-01-01',
@@ -89,24 +89,24 @@ describe('ApmManifestManager', () => {
         version: '1.0.0',
       });
 
-      const manifest = manager.generate();
+      const manifest = await manager.generate();
       expect(manifest.packages.skills).toHaveLength(2);
       const names = manifest.packages.skills.map(s => s.name);
       expect(names).toContain('ks-mongodb-core');
       expect(names).toContain('ks-security-patterns');
     });
 
-    it('sets type to SKILL for discovered skill packages', () => {
+    it('sets type to SKILL for discovered skill packages', async () => {
       writeSkillMd(tmpDir, 'ks-mongodb-core', { description: '', created: '', updated: '', version: '1.0.0' });
-      const manifest = manager.generate();
+      const manifest = await manager.generate();
       expect(manifest.packages.skills[0].type).toBe(PackageType.SKILL);
     });
 
-    it('ignores directories not starting with ks-', () => {
+    it('ignores directories not starting with ks-', async () => {
       const ignoredDir = path.join(tmpDir, '.agents', 'skills', 'not-a-skill');
       fs.mkdirSync(ignoredDir, { recursive: true });
       fs.writeFileSync(path.join(ignoredDir, 'SKILL.md'), '---\ndescription: x\n---\n');
-      const manifest = manager.generate();
+      const manifest = await manager.generate();
       expect(manifest.packages.skills).toHaveLength(0);
     });
   });

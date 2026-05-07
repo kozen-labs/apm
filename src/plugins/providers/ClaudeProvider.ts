@@ -1,16 +1,22 @@
-import fs from 'fs';
+import { access, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { ApmPackage, InstalledPackage } from '../../models/package.model';
-import { Provider, Scope } from '../../models/provider.model';
-import { ApmSource } from '../../models/config.model';
-import { IComponentOps } from '../../models/component.model';
+import { IApmPackage } from '../../models/IApmPackage';
+import { IInstalledPackage } from '../../models/IInstalledPackage';
+import { Provider } from '../../models/Provider';
+import { Scope } from '../../models/Scope';
+import { IApmSource } from '../../models/IApmSource';
+import { IComponentOps } from '../../models/IComponentOps';
+import { IRepository } from '../../models/IRepository';
+import { IProvider } from '../../models/IProvider';
 import { bareSkillName } from '../../utils/pkg';
-import { IRepository } from '../repositories/IRepository';
-import { IProvider } from './IProvider';
 
 export class ClaudeProvider implements IProvider {
-  readonly name = Provider.CLAUDE;
+  readonly name: string;
+
+  constructor() {
+    this.name = Provider.CLAUDE;
+  }
 
   getInstallPath(scope: Scope, projectRoot: string, customDir?: string): string {
     if (customDir) return customDir;
@@ -19,17 +25,18 @@ export class ClaudeProvider implements IProvider {
       : path.join(projectRoot,  '.claude', 'skills');
   }
 
-  install(pkg: ApmPackage, repo: IRepository, source: ApmSource, component: IComponentOps, installPath: string, cacheDir: string, projectRoot: string): void {
-    const localPath = repo.getLocalPath(pkg, source, cacheDir, projectRoot);
-    component.copyTo(localPath, bareSkillName(pkg.name), installPath);
+  async install(pkg: IApmPackage, repo: IRepository, source: IApmSource, component: IComponentOps, installPath: string, cacheDir: string, projectRoot: string): Promise<void> {
+    const localPath = await repo.getLocalPath(pkg, source, cacheDir, projectRoot);
+    await component.copyTo(localPath, bareSkillName(pkg.name), installPath);
   }
 
-  uninstall(name: string, component: IComponentOps, installPath: string): void {
-    component.removeFrom(bareSkillName(name), installPath);
+  async uninstall(name: string, component: IComponentOps, installPath: string): Promise<void> {
+    await component.removeFrom(bareSkillName(name), installPath);
   }
 
-  listInstalled(installPath: string, component: IComponentOps, sourceMap: Map<string, string>): InstalledPackage[] {
-    return component.listFrom(installPath, sourceMap).map(e => ({
+  async listInstalled(installPath: string, component: IComponentOps, sourceMap: Map<string, string>): Promise<IInstalledPackage[]> {
+    const entries = await component.listFrom(installPath, sourceMap);
+    return entries.map(e => ({
       name:          e.name,
       type:          component.type,
       provider:      Provider.CLAUDE,
@@ -41,16 +48,20 @@ export class ClaudeProvider implements IProvider {
     }));
   }
 
-  postInstall(installPath: string, sourceRoot: string): void {
+  async postInstall(installPath: string, sourceRoot: string): Promise<void> {
     const src = path.join(sourceRoot, '.claude', 'manifest.json');
-    if (!fs.existsSync(src)) return;
     try {
-      let text = fs.readFileSync(src, 'utf-8');
+      await access(src);
+    } catch {
+      return;
+    }
+    try {
+      let text = await readFile(src, 'utf-8');
       text = text.replace(/"\.\.\/\.agents\/skills\//g, '"');
       text = text.replace(/"\.\.\/\.claude\/skills\//g, '"');
-      fs.writeFileSync(path.join(installPath, 'manifest.json'), text, 'utf-8');
+      await writeFile(path.join(installPath, 'manifest.json'), text, 'utf-8');
     } catch {
-      // manifest.json is best-effort
+      /* manifest.json is best-effort */
     }
   }
 }

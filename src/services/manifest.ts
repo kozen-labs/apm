@@ -1,36 +1,43 @@
-import fs from 'fs';
+import { readFile, writeFile, mkdir, readdir } from 'fs/promises';
 import path from 'path';
-import { ApmManifest, ApmPackage } from '../models/package.model';
-import { PackageType, inferGroup } from '../models/provider.model';
-import { parseFrontmatter } from '../utils/frontmatter';
+import { IApmManifest } from '../models/IApmManifest';
+import { IApmPackage } from '../models/IApmPackage';
+import { PackageType } from '../models/PackageType';
+import { inferGroup } from '../models/Groups';
+import { parseFrontmatterAsync } from '../utils/frontmatter';
 
 const MANIFEST_FILE = process.env.KOZEN_APM_MANIFEST_FILE ?? path.join('.agents', 'apm.json');
 
 /** Reads, writes, and generates the .agents/apm.json source manifest. */
 export class ApmManifestManager {
-  private manifestPath: string;
+  private readonly manifestPath: string;
 
-  constructor(private projectRoot: string) {
+  constructor(projectRoot: string) {
     this.manifestPath = path.join(projectRoot, MANIFEST_FILE);
   }
 
-  read(): ApmManifest | null {
+  async read(): Promise<IApmManifest | null> {
     try {
-      const text = fs.readFileSync(this.manifestPath, 'utf-8');
-      return JSON.parse(text) as ApmManifest;
+      const text = await readFile(this.manifestPath, 'utf-8');
+      return JSON.parse(text) as IApmManifest;
     } catch {
       return null;
     }
   }
 
-  write(manifest: ApmManifest): void {
-    fs.mkdirSync(path.dirname(this.manifestPath), { recursive: true });
-    fs.writeFileSync(this.manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
+  async write(manifest: IApmManifest): Promise<void> {
+    await mkdir(path.dirname(this.manifestPath), { recursive: true });
+    await writeFile(this.manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
   }
 
-  generate(): ApmManifest {
-    const skillsDir = path.join(this.projectRoot, '.agents', 'skills');
-    const agentsDir = path.join(this.projectRoot, '.agents', 'agents');
+  async generate(): Promise<IApmManifest> {
+    const skillsDir = path.join(path.dirname(this.manifestPath), 'skills');
+    const agentsDir = path.join(path.dirname(this.manifestPath), 'agents');
+
+    const [skills, agents] = await Promise.all([
+      this.scanSkills(skillsDir),
+      this.scanAgents(agentsDir),
+    ]);
 
     return {
       schemaVersion: '1.0',
@@ -38,57 +45,74 @@ export class ApmManifestManager {
       displayName:   'SDLC Skills Pack',
       version:       '2.0.0',
       description:   '28 skills and 5 agents across MongoDB, Security, Software Engineering, Technologies, and Content.',
-      packages: {
-        skills: this.scanSkills(skillsDir),
-        agents: this.scanAgents(agentsDir),
-      },
+      packages: { skills, agents },
     };
   }
 
   // ── private ──────────────────────────────────────────────────────────────
 
-  private scanSkills(baseDir: string): ApmPackage[] {
-    if (!fs.existsSync(baseDir)) return [];
-    const pkgs: ApmPackage[] = [];
-
-    for (const entry of fs.readdirSync(baseDir, { withFileTypes: true })) {
-      if (!entry.isDirectory() || !entry.name.startsWith('ks-')) continue;
-      const skillMd = path.join(baseDir, entry.name, 'SKILL.md');
-      if (!fs.existsSync(skillMd)) continue;
-      const fm = parseFrontmatter(skillMd);
-      pkgs.push({
-        name:        entry.name,
-        path:        `skills/${entry.name}`,
-        type:        PackageType.SKILL,
-        description: String(fm.description ?? ''),
-        group:       inferGroup(entry.name),
-        created:     String(fm.created  ?? ''),
-        updated:     String(fm.updated  ?? ''),
-        version:     String(fm.version  ?? '1.0.0'),
-      });
+  private async scanSkills(baseDir: string): Promise<IApmPackage[]> {
+    let entries;
+    try {
+      entries = await readdir(baseDir, { withFileTypes: true });
+    } catch {
+      return [];
     }
-    return pkgs.sort((a, b) => a.name.localeCompare(b.name));
+
+    const pkgs = await Promise.all(
+      entries
+        .filter(e => e.isDirectory() && e.name.startsWith('ks-'))
+        .map(async entry => {
+          const skillMd = path.join(baseDir, entry.name, 'SKILL.md');
+          try {
+            await readFile(skillMd);
+          } catch {
+            return null;
+          }
+          const fm = await parseFrontmatterAsync(skillMd);
+          return {
+            name:        entry.name,
+            path:        `skills/${entry.name}`,
+            type:        PackageType.SKILL,
+            description: String(fm.description ?? ''),
+            group:       inferGroup(entry.name),
+            created:     String(fm.created  ?? ''),
+            updated:     String(fm.updated  ?? ''),
+            version:     String(fm.version  ?? '1.0.0'),
+          } satisfies IApmPackage;
+        }),
+    );
+
+    return (pkgs.filter(Boolean) as IApmPackage[]).sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private scanAgents(baseDir: string): ApmPackage[] {
-    if (!fs.existsSync(baseDir)) return [];
-    const pkgs: ApmPackage[] = [];
-
-    for (const entry of fs.readdirSync(baseDir, { withFileTypes: true })) {
-      if (!entry.name.endsWith('.md')) continue;
-      const agentFile = path.join(baseDir, entry.name);
-      const fm = parseFrontmatter(agentFile);
-      const name = entry.name.replace(/\.md$/, '');
-      pkgs.push({
-        name,
-        path:        `agents/${entry.name}`,
-        type:        PackageType.AGENT,
-        description: String(fm.description ?? '').slice(0, 200),
-        group:       inferGroup(name) === 'MongoDB' ? 'MongoDB' : 'MongoDB',
-        created:     String(fm.created ?? ''),
-        updated:     String(fm.updated ?? ''),
-      });
+  private async scanAgents(baseDir: string): Promise<IApmPackage[]> {
+    let entries;
+    try {
+      entries = await readdir(baseDir, { withFileTypes: true });
+    } catch {
+      return [];
     }
+
+    const pkgs = await Promise.all(
+      entries
+        .filter(e => e.isFile() && e.name.endsWith('.md'))
+        .map(async entry => {
+          const agentFile = path.join(baseDir, entry.name);
+          const fm        = await parseFrontmatterAsync(agentFile);
+          const name      = entry.name.replace(/\.md$/, '');
+          return {
+            name,
+            path:        `agents/${entry.name}`,
+            type:        PackageType.AGENT,
+            description: String(fm.description ?? '').slice(0, 200),
+            group:       inferGroup(name),
+            created:     String(fm.created ?? ''),
+            updated:     String(fm.updated ?? ''),
+          } satisfies IApmPackage;
+        }),
+    );
+
     return pkgs.sort((a, b) => a.name.localeCompare(b.name));
   }
 }

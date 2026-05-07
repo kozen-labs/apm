@@ -60,12 +60,13 @@ export default ApmModule;
 export { ApmManifestManager } from './services/manifest';
 export { ApmConfigManager }   from './services/config';
 export { ApmLockManager }     from './services/lock';
-export { type IComponentOps } from './models/component.model';
 
 // ── Plugin interfaces ──────────────────────────────────────────────────────
-export { type IRepository } from './plugins/repositories/IRepository';
-export { type IProvider }   from './plugins/providers/IProvider';
-export { type IComponent }  from './plugins/components/IComponent';
+export type { IRepository } from './models/IRepository';
+export type { IProvider }   from './models/IProvider';
+export type { IComponent }  from './models/IComponent';
+export type { IComponentOps }     from './models/IComponentOps';
+export type { IComponentScanner } from './models/IComponentScanner';
 
 // ── Repositories ───────────────────────────────────────────────────────────
 export { LocalRepository }         from './plugins/repositories/LocalRepository';
@@ -95,10 +96,27 @@ export { Agent }         from './plugins/components/Agent';
 export { Hook }          from './plugins/components/Hook';
 export { Context }       from './plugins/components/Context';
 
-// ── Utilities and models ───────────────────────────────────────────────────
-export { parseFrontmatter, stripFrontmatter } from './utils/frontmatter';
-export { findProjectRoot, getOs }             from './utils/system';
-export * from './models/package.model';
-export * from './models/provider.model';
-export * from './models/config.model';
-export * from './models/component.model';
+// ── Utilities ─────────────────────────────────────────────────────────────
+export { parseFrontmatter, stripFrontmatter, parseFrontmatterAsync, stripFrontmatterAsync } from './utils/frontmatter';
+export { findProjectRoot, getOs } from './utils/system';
+
+// ── Models ────────────────────────────────────────────────────────────────
+export { PackageType }    from './models/PackageType';
+export { Provider }       from './models/Provider';
+export { Scope }          from './models/Scope';
+export { GROUPS, inferGroup } from './models/Groups';
+export type { GroupName }     from './models/Groups';
+export type { SourceType }    from './models/SourceType';
+export type { IApmSource }    from './models/IApmSource';
+export type { IApmConfig }    from './models/IApmConfig';
+export type { IApmLock }      from './models/IApmLock';
+export type { IApmLockEntry } from './models/IApmLockEntry';
+export type { IApmPackage }   from './models/IApmPackage';
+export type { IApmManifest }  from './models/IApmManifest';
+export type { IInstalledPackage } from './models/IInstalledPackage';
+export type { IInstalledMeta }    from './models/IInstalledMeta';
+export type { IOperationResult }  from './models/IOperationResult';
+export type { IComponentBaseOpts }    from './models/IComponentBaseOpts';
+export type { IComponentInstallOpts } from './models/IComponentInstallOpts';
+export type { IComponentSetupOpts }   from './models/IComponentSetupOpts';
+export type { IComponentRefreshOpts } from './models/IComponentRefreshOpts';

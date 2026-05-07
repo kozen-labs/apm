@@ -1,74 +1,82 @@
-import fs from 'fs';
+import { access, readFile, writeFile, mkdir, copyFile, readdir, stat, rm } from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
-import { ApmPackage } from '../../models/package.model';
-import { ApmSource } from '../../models/config.model';
-import { PackageType, inferGroup } from '../../models/provider.model';
-import { IComponentScanner } from '../../models/component.model';
-import { IRepository } from './IRepository';
-import { parseFrontmatter } from '../../utils/frontmatter';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { IApmPackage } from '../../models/IApmPackage';
+import { IApmSource } from '../../models/IApmSource';
+import { PackageType } from '../../models/PackageType';
+import { inferGroup } from '../../models/Groups';
+import { IComponentScanner } from '../../models/IComponentScanner';
+import { IRepository } from '../../models/IRepository';
+import { parseFrontmatterAsync } from '../../utils/frontmatter';
 
-const STALE_MS = 24 * 60 * 60 * 1000; // 24 h
+const execFileAsync = promisify(execFile);
+const STALE_MS = 24 * 60 * 60 * 1000;
 
 export class SkillsShRepository implements IRepository {
-  readonly type = 'skills-sh';
+  readonly type: string;
 
-  list(source: ApmSource, cacheDir: string, _projectRoot: string, _component?: IComponentScanner): ApmPackage[] {
+  constructor() {
+    this.type = 'skills-sh';
+  }
+
+  async list(source: IApmSource, cacheDir: string, _projectRoot: string, _component?: IComponentScanner): Promise<IApmPackage[]> {
     const repoDir = this.repoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) this.clone(source, repoDir);
+    if (!(await this.exists(repoDir))) await this.clone(source, repoDir);
     return this.discover(source, repoDir, cacheDir);
   }
 
-  getLocalPath(pkg: ApmPackage, source: ApmSource, cacheDir: string, _projectRoot: string): string {
+  async getLocalPath(pkg: IApmPackage, source: IApmSource, cacheDir: string, _projectRoot: string): Promise<string> {
     const repoDir = this.repoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) this.clone(source, repoDir);
+    if (!(await this.exists(repoDir))) await this.clone(source, repoDir);
     const vDir = pkg.sourceRef ?? path.join(this.vSkillsRoot(source, cacheDir), pkg.name.split('/').pop()!);
-    if (!fs.existsSync(vDir)) {
-      this.discover(source, repoDir, cacheDir);
+    if (!(await this.exists(vDir))) {
+      await this.discover(source, repoDir, cacheDir);
     }
     return vDir;
   }
 
-  refresh(source: ApmSource, cacheDir: string): void {
+  async refresh(source: IApmSource, cacheDir: string): Promise<void> {
     const repoDir = this.repoDir(source, cacheDir);
-    if (!fs.existsSync(repoDir)) { this.clone(source, repoDir); return; }
+    if (!(await this.exists(repoDir))) { await this.clone(source, repoDir); return; }
     try {
-      execSync(`git -C "${repoDir}" pull --ff-only --quiet`, { stdio: 'pipe' });
-      fs.writeFileSync(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
+      await execFileAsync('git', ['-C', repoDir, 'pull', '--ff-only', '--quiet']);
+      await writeFile(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
     } catch (err) {
       throw new Error(`Failed to refresh skills-sh source "${source.name}": ${String(err)}`);
     }
   }
 
-  isStale(source: ApmSource, cacheDir: string): boolean {
+  async isStale(source: IApmSource, cacheDir: string): Promise<boolean> {
     const marker = path.join(this.repoDir(source, cacheDir), '.apm-last-refresh');
-    if (!fs.existsSync(marker)) return true;
-    return Date.now() - new Date(fs.readFileSync(marker, 'utf-8').trim()).getTime() > STALE_MS;
+    try {
+      const content = await readFile(marker, 'utf-8');
+      return Date.now() - new Date(content.trim()).getTime() > STALE_MS;
+    } catch {
+      return true;
+    }
   }
 
   // ── private ─────────────────────────────────────────────────────────────────
 
-  private discover(source: ApmSource, repoDir: string, cacheDir: string): ApmPackage[] {
+  private async discover(source: IApmSource, repoDir: string, cacheDir: string): Promise<IApmPackage[]> {
     const manifestPath = path.join(repoDir, 'skills.json');
-    if (fs.existsSync(manifestPath)) {
+    if (await this.exists(manifestPath)) {
       return this.fromManifest(source, repoDir, manifestPath, cacheDir);
     }
 
-    const scanDir = source.skillsPath
-      ? path.join(repoDir, source.skillsPath)
-      : repoDir;
+    const scanDir = source.skillsPath ? path.join(repoDir, source.skillsPath) : repoDir;
+    if (!(await this.exists(scanDir))) return [];
 
-    if (!fs.existsSync(scanDir)) return [];
-
-    const entries  = fs.readdirSync(scanDir, { withFileTypes: true });
+    const entries  = await readdir(scanDir, { withFileTypes: true });
     const hasDirs  = entries.some(e => e.isDirectory());
-    const packages: ApmPackage[] = [];
+    const packages: IApmPackage[] = [];
 
     if (hasDirs) {
       for (const e of entries.filter(e => e.isDirectory())) {
         const dirPath = path.join(scanDir, e.name);
-        const meta    = this.readMeta(dirPath, e.name);
+        const meta    = await this.readMeta(dirPath, e.name);
         packages.push(this.makePackage(source, e.name, dirPath, meta));
       }
     }
@@ -76,58 +84,71 @@ export class SkillsShRepository implements IRepository {
     for (const e of entries.filter(e => e.isFile() && e.name.endsWith('.md') && e.name !== 'README.md')) {
       const skillName = path.basename(e.name, '.md');
       const mdFile    = path.join(scanDir, e.name);
-      const vDir      = this.virtualise(skillName, mdFile, source, cacheDir);
-      const meta      = this.readMeta(vDir, skillName);
+      const vDir      = await this.virtualise(skillName, mdFile, source, cacheDir);
+      const meta      = await this.readMeta(vDir, skillName);
       packages.push(this.makePackage(source, skillName, vDir, meta));
     }
 
     return packages.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private fromManifest(
-    source: ApmSource,
+  private async fromManifest(
+    source: IApmSource,
     repoDir: string,
     manifestPath: string,
     cacheDir: string,
-  ): ApmPackage[] {
+  ): Promise<IApmPackage[]> {
     try {
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as {
+      const text     = await readFile(manifestPath, 'utf-8');
+      const manifest = JSON.parse(text) as {
         skills?: Array<{ name: string; file?: string; description?: string; updated?: string }>;
       };
-      return (manifest.skills ?? []).map(entry => {
-        const mdFile = path.join(repoDir, entry.file ?? `${entry.name}.md`);
-        const vDir   = this.virtualise(entry.name, mdFile, source, cacheDir);
-        return this.makePackage(source, entry.name, vDir, {
-          description: entry.description ?? '',
-          updated:     entry.updated     ?? '',
-        });
-      });
+      return Promise.all(
+        (manifest.skills ?? []).map(async entry => {
+          const mdFile = path.join(repoDir, entry.file ?? `${entry.name}.md`);
+          const vDir   = await this.virtualise(entry.name, mdFile, source, cacheDir);
+          return this.makePackage(source, entry.name, vDir, {
+            description: entry.description ?? '',
+            updated:     entry.updated     ?? '',
+          });
+        }),
+      );
     } catch {
       return [];
     }
   }
 
-  private virtualise(skillName: string, mdFile: string, source: ApmSource, cacheDir: string): string {
+  private async virtualise(skillName: string, mdFile: string, source: IApmSource, cacheDir: string): Promise<string> {
     const vDir     = path.join(this.vSkillsRoot(source, cacheDir), skillName);
     const destFile = path.join(vDir, `${skillName}.md`);
-    fs.mkdirSync(vDir, { recursive: true });
-    if (!fs.existsSync(destFile) || this.isNewerThan(mdFile, destFile)) {
-      fs.copyFileSync(mdFile, destFile);
+    await mkdir(vDir, { recursive: true });
+    if (!(await this.exists(destFile)) || await this.isNewerThan(mdFile, destFile)) {
+      await copyFile(mdFile, destFile);
     }
     return vDir;
   }
 
-  private vSkillsRoot(source: ApmSource, cacheDir: string): string {
+  private vSkillsRoot(source: IApmSource, cacheDir: string): string {
     return path.join(this.repoDir(source, cacheDir), '_vskills');
   }
 
-  private readMeta(dirOrFile: string, name: string): { description: string; updated: string } {
-    const candidates = fs.existsSync(dirOrFile) && fs.statSync(dirOrFile).isDirectory()
-      ? fs.readdirSync(dirOrFile).filter(f => f.endsWith('.md')).map(f => path.join(dirOrFile, f))
-      : [dirOrFile];
+  private async readMeta(dirOrFile: string, name: string): Promise<{ description: string; updated: string }> {
+    let candidates: string[];
+    try {
+      const s = await stat(dirOrFile);
+      if (s.isDirectory()) {
+        const files = await readdir(dirOrFile);
+        candidates = files.filter(f => f.endsWith('.md')).map(f => path.join(dirOrFile, f));
+      } else {
+        candidates = [dirOrFile];
+      }
+    } catch {
+      return { description: name, updated: '' };
+    }
+
     for (const candidate of candidates) {
       try {
-        const fm = parseFrontmatter(candidate);
+        const fm = await parseFrontmatterAsync(candidate);
         return {
           description: String((fm as Record<string, unknown>).description ?? ''),
           updated:     String((fm as Record<string, unknown>).updated     ?? ''),
@@ -138,11 +159,11 @@ export class SkillsShRepository implements IRepository {
   }
 
   private makePackage(
-    source: ApmSource,
+    source: IApmSource,
     rawName: string,
     localPath: string,
     meta: { description: string; updated: string },
-  ): ApmPackage {
+  ): IApmPackage {
     const name = source.namespace ? `${source.namespace}/${rawName}` : rawName;
     return {
       name,
@@ -157,34 +178,41 @@ export class SkillsShRepository implements IRepository {
     };
   }
 
-  private isNewerThan(src: string, dest: string): boolean {
+  private async isNewerThan(src: string, dest: string): Promise<boolean> {
     try {
-      return fs.statSync(src).mtimeMs > fs.statSync(dest).mtimeMs;
+      const [srcStat, destStat] = await Promise.all([stat(src), stat(dest)]);
+      return srcStat.mtimeMs > destStat.mtimeMs;
     } catch {
       return true;
     }
   }
 
-  private repoDir(source: ApmSource, cacheDir: string): string {
+  private repoDir(source: IApmSource, cacheDir: string): string {
     return path.join(cacheDir || path.join(os.homedir(), '.apm', 'cache'), source.name);
   }
 
-  private clone(source: ApmSource, repoDir: string): void {
+  private async clone(source: IApmSource, repoDir: string): Promise<void> {
     if (!source.url) throw new Error(`skills-sh source "${source.name}" has no url configured.`);
-    try { execSync('git --version', { stdio: 'pipe' }); } catch {
+    try { await execFileAsync('git', ['--version']); } catch {
       throw new Error('git is required for skills-sh sources but was not found on PATH.');
     }
-    fs.mkdirSync(path.dirname(repoDir), { recursive: true });
-    const refFlag = source.ref ? `--branch "${source.ref}"` : '';
+    await mkdir(path.dirname(repoDir), { recursive: true });
+    const args = ['clone', '--depth=1'];
+    if (source.ref) args.push('--branch', source.ref);
+    args.push(source.url, repoDir);
     try {
-      execSync(`git clone --depth=1 ${refFlag} "${source.url}" "${repoDir}"`, { stdio: 'pipe' });
-      fs.writeFileSync(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
+      await execFileAsync('git', args);
+      await writeFile(path.join(repoDir, '.apm-last-refresh'), new Date().toISOString());
     } catch (err) {
-      if (fs.existsSync(repoDir)) fs.rmSync(repoDir, { recursive: true, force: true });
+      try { await rm(repoDir, { recursive: true, force: true }); } catch { /* best-effort cleanup */ }
       throw new Error(
         `Failed to clone "${source.url}": ${String(err)}\n` +
         'Ensure git is on your PATH and the repository URL is accessible.',
       );
     }
+  }
+
+  private async exists(p: string): Promise<boolean> {
+    try { await access(p); return true; } catch { return false; }
   }
 }

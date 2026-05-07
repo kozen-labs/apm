@@ -1,8 +1,9 @@
-import { ApmPackage, InstalledPackage } from '../../models/package.model';
-import { Scope } from '../../models/provider.model';
-import { ApmSource } from '../../models/config.model';
-import { IComponentOps } from '../../models/component.model';
-import { IRepository } from '../repositories/IRepository';
+import type { IApmPackage } from './IApmPackage';
+import type { IInstalledPackage } from './IInstalledPackage';
+import type { IApmSource } from './IApmSource';
+import type { IComponentOps } from './IComponentOps';
+import type { IRepository } from './IRepository';
+import type { Scope } from './Scope';
 
 /**
  * Provider — knows WHERE and HOW to install artifacts for a specific AI tool.
@@ -19,22 +20,22 @@ export interface IProvider {
   getInstallPath(scope: Scope, projectRoot: string, customDir?: string): string;
 
   install(
-    pkg: ApmPackage,
+    pkg: IApmPackage,
     repo: IRepository,
-    source: ApmSource,
+    source: IApmSource,
     component: IComponentOps,
     installPath: string,
     cacheDir: string,
     projectRoot: string,
-  ): void;
+  ): Promise<void>;
 
-  uninstall(name: string, component: IComponentOps, installPath: string): void;
+  uninstall(name: string, component: IComponentOps, installPath: string): Promise<void>;
 
   listInstalled(
     installPath: string,
     component: IComponentOps,
     sourceMap: Map<string, string>,
-  ): InstalledPackage[];
+  ): Promise<IInstalledPackage[]>;
 
-  postInstall(installPath: string, sourceRoot: string): void;
+  postInstall(installPath: string, sourceRoot: string): Promise<void>;
 }

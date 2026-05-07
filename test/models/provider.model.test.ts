@@ -1,10 +1,7 @@
-import {
-  PackageType,
-  Provider,
-  Scope,
-  GROUPS,
-  inferGroup,
-} from '../../src/models/provider.model';
+import { PackageType } from '../../src/models/PackageType';
+import { Provider } from '../../src/models/Provider';
+import { Scope } from '../../src/models/Scope';
+import { GROUPS, inferGroup } from '../../src/models/Groups';
 
 describe('PackageType enum', () => {
   it('has the expected string values', () => {
